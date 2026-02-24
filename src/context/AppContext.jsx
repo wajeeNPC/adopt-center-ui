@@ -1,5 +1,6 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
-import { petAPI } from '../services/api';
+import { useNavigate, useLocation, useParams } from 'react-router-dom';
+import { petAPI, authAPI } from '../services/api';
 
 const AppContext = createContext();
 
@@ -13,10 +14,35 @@ export const useAppContext = () => {
 
 export const AppProvider = ({ children }) => {
   const [pets, setPets] = useState([]);
-  const [currentPage, setCurrentPage] = useState('dashboard');
-  const [selectedPetId, setSelectedPetId] = useState(null);
   const [toast, setToast] = useState(null);
   const [loading, setLoading] = useState(false);
+  const navigateRouter = useNavigate();
+  const location = useLocation();
+
+  // Derive currentPage from URL pathname
+  const getCurrentPage = () => {
+    const path = location.pathname;
+    if (path === '/' || path === '/dashboard') return 'dashboard';
+    if (path === '/inventory') return 'inventory';
+    if (path === '/add-pet') return 'add-pet';
+    if (path.startsWith('/pet/')) return 'pet-detail';
+    if (path.startsWith('/edit-pet/')) return 'edit-pet';
+    if (path === '/applications') return 'applications';
+    if (path === '/vaccinations') return 'vaccinations';
+    if (path === '/reports') return 'reports';
+    if (path === '/settings') return 'settings';
+    return 'dashboard';
+  };
+
+  const currentPage = getCurrentPage();
+
+  // Get petId from URL params if on pet detail or edit page
+  const getSelectedPetId = () => {
+    const match = location.pathname.match(/\/(pet|edit-pet)\/([^/]+)/);
+    return match ? match[2] : null;
+  };
+
+  const selectedPetId = getSelectedPetId();
 
   const showToast = (message, type = 'success') => {
     setToast({ message, type });
@@ -24,9 +50,40 @@ export const AppProvider = ({ children }) => {
   };
 
   const navigate = (page, petId = null) => {
-    setCurrentPage(page);
-    setSelectedPetId(petId);
     window.scrollTo(0, 0);
+    
+    // Map page names to routes
+    switch (page) {
+      case 'dashboard':
+        navigateRouter('/');
+        break;
+      case 'inventory':
+        navigateRouter('/inventory');
+        break;
+      case 'add-pet':
+        navigateRouter('/add-pet');
+        break;
+      case 'pet-detail':
+        if (petId) navigateRouter(`/pet/${petId}`);
+        break;
+      case 'edit-pet':
+        if (petId) navigateRouter(`/edit-pet/${petId}`);
+        break;
+      case 'applications':
+        navigateRouter('/applications');
+        break;
+      case 'vaccinations':
+        navigateRouter('/vaccinations');
+        break;
+      case 'reports':
+        navigateRouter('/reports');
+        break;
+      case 'settings':
+        navigateRouter('/settings');
+        break;
+      default:
+        navigateRouter('/');
+    }
   };
 
   // Fetch all pets from API
@@ -98,6 +155,12 @@ export const AppProvider = ({ children }) => {
     }
   };
 
+  const logout = () => {
+    authAPI.logout();
+    showToast('Logged out successfully', 'info');
+    navigateRouter('/login');
+  };
+
   const value = {
     pets,
     addPet,
@@ -108,7 +171,8 @@ export const AppProvider = ({ children }) => {
     currentPage,
     navigate,
     selectedPetId,
-    loading
+    loading,
+    logout
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

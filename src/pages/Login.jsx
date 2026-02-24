@@ -103,7 +103,7 @@ const Login = ({ onLogin }) => {
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 cursor-pointer"
                   disabled={isLoading}
                 >
                   {showPassword ? (
@@ -119,7 +119,7 @@ const Login = ({ onLogin }) => {
             <div className="text-right">
               <button
                 type="button"
-                className="text-sm text-pink-600 hover:text-pink-700 font-medium"
+                className="text-sm text-pink-600 hover:text-pink-700 font-medium cursor-pointer"
                 disabled={isLoading}
               >
                 Forgot Password?
@@ -130,7 +130,7 @@ const Login = ({ onLogin }) => {
             <button
               onClick={handleSubmit}
               disabled={isLoading}
-              className="w-full bg-pink-600 text-white py-2.5 rounded-md font-medium hover:bg-pink-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-sm"
+              className="w-full bg-pink-600 text-white py-2.5 rounded-md font-medium hover:bg-pink-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-sm cursor-pointer"
             >
               {isLoading ? (
                 <>
@@ -148,7 +148,7 @@ const Login = ({ onLogin }) => {
             Don't have an account?{' '}
             <button
               type="button"
-              className="text-pink-600 hover:text-pink-700 font-medium"
+              className="text-pink-600 hover:text-pink-700 font-medium cursor-pointer"
               disabled={isLoading}
             >
               Sign up Here

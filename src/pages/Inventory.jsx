@@ -1,192 +1,163 @@
 import React, { useState } from 'react';
-import { PlusCircle, Dog, Cat, Edit, Trash2, Search } from 'lucide-react';
+import { Plus, MoreHorizontal, Eye, Edit, Trash2 } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
+import { Button } from '../components/ui/button';
+import { Badge } from '../components/ui/badge';
+import { Avatar, AvatarFallback, AvatarImage } from '../components/ui/avatar';
+import { getImageUrl } from '../lib/utils';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "../components/ui/table";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "../components/ui/dropdown-menu";
+import FilterBar from '../components/common/FilterBar';
 
 const Inventory = () => {
-  const { pets, deletePet, navigate, loading } = useAppContext();
+  const { pets, deletePet, navigate } = useAppContext();
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterStatus, setFilterStatus] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [speciesFilter, setSpeciesFilter] = useState('all');
 
-  const handleDelete = async (e, id, name) => {
-    e.stopPropagation();
+  // Filter Logic
+  const filteredPets = pets.filter(pet => {
+    const matchesSearch = pet.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      pet.breed.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus = statusFilter === 'all' || pet.adoptionStatus === statusFilter;
+    const matchesSpecies = speciesFilter === 'all' || pet.species === speciesFilter;
+
+    return matchesSearch && matchesStatus && matchesSpecies;
+  });
+
+  const handleDelete = (id, name) => {
     if (window.confirm(`Are you sure you want to delete ${name}?`)) {
-      try {
-        await deletePet(id);
-      } catch (error) {
-        console.error('Error deleting pet:', error);
-      }
+      deletePet(id);
     }
   };
 
-  const handleRowClick = (id) => {
-    navigate('pet-detail', id);
+  const getStatusVariant = (status) => {
+    switch (status) {
+      case 'Available': return 'success';
+      case 'Adopted': return 'secondary';
+      case 'Pending': return 'warning';
+      default: return 'default';
+    }
   };
 
-  // Filter pets based on search and status
-  const filteredPets = pets.filter(pet => {
-    const matchesSearch = pet.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          pet.breed?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          pet.species?.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = filterStatus === 'all' || pet.adoptionStatus === filterStatus;
-    return matchesSearch && matchesStatus;
-  });
-
-  if (loading && pets.length === 0) {
-    return (
-      <div className="text-center py-12">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-pink-600 mx-auto"></div>
-        <p className="text-gray-600 mt-4">Loading pets...</p>
-      </div>
-    );
-  }
-
   return (
-    <div>
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">
+    <div className="space-y-6 animate-in fade-in duration-500">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 mb-1">Pet Inventory</h1>
-          <p className="text-sm text-gray-500">Manage all your pet listings</p>
+          <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Pet Inventory</h1>
+          <p className="text-slate-500 mt-1">Manage and track all pets in the shelter.</p>
         </div>
-        <button
-          onClick={() => navigate('add-pet')}
-          className="bg-pink-600 text-white px-4 py-2.5 rounded-lg hover:bg-pink-700 transition-colors flex items-center gap-2 text-sm font-medium"
-        >
-          <PlusCircle className="w-4 h-4" />
+        <Button onClick={() => navigate('add-pet')} className="bg-pink-600 hover:bg-pink-700 shadow-none">
+          <Plus className="w-4 h-4 mr-2" />
           Add Pet
-        </button>
+        </Button>
       </div>
 
-      {/* Filters */}
-      <div className="flex items-center gap-3 mb-6">
-        {/* Search */}
-        <div className="relative w-64">
-          <Search className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-          <input
-            type="text"
-            placeholder="Search..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-9 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent"
-          />
-        </div>
+      <FilterBar
+        searchTerm={searchTerm}
+        onSearchChange={setSearchTerm}
+        statusFilter={statusFilter}
+        onStatusChange={setStatusFilter}
+        speciesFilter={speciesFilter}
+        onSpeciesChange={setSpeciesFilter}
+        onClearFilters={() => {
+          setSearchTerm('');
+          setStatusFilter('all');
+          setSpeciesFilter('all');
+        }}
+      />
 
-        {/* Status Filter */}
-        <select
-          value={filterStatus}
-          onChange={(e) => setFilterStatus(e.target.value)}
-          className="px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent"
-        >
-          <option value="all">All Status</option>
-          <option value="Available">Available</option>
-          <option value="Pending">Pending</option>
-          <option value="Adopted">Adopted</option>
-        </select>
-      </div>
-
-      {/* Table */}
-      <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-gray-50 border-b border-gray-200">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Pet</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Breed</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Gender</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Views</th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {filteredPets.length === 0 ? (
-                <tr>
-                  <td colSpan="7" className="px-6 py-8 text-center text-sm text-gray-500">
-                    No pets found
-                  </td>
-                </tr>
-              ) : (
-                filteredPets.map((pet) => (
-                  <tr
-                    key={pet._id}
-                    onClick={() => handleRowClick(pet._id)}
-                    className="hover:bg-gray-50 cursor-pointer transition-colors"
-                  >
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center overflow-hidden flex-shrink-0">
-                          {pet.imageUrl ? (
-                            <img 
-                              src={pet.imageUrl} 
-                              alt={pet.name}
-                              className="w-full h-full object-cover"
-                            />
-                          ) : (
-                            <span className="text-xl">
-                              {pet.species === 'Dog' ? '🐕' : '🐱'}
-                            </span>
-                          )}
-                        </div>
-                        <span className="text-sm font-medium text-gray-900">{pet.name}</span>
+      <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+        <Table>
+          <TableHeader>
+            <TableRow className="bg-slate-50/50 hover:bg-slate-50/50">
+              <TableHead className="w-[250px]">Pet</TableHead>
+              <TableHead>Species</TableHead>
+              <TableHead>Breed</TableHead>
+              <TableHead>Age</TableHead>
+              <TableHead>Gender</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {filteredPets.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={7} className="h-24 text-center">
+                  No pets found matching your criteria.
+                </TableCell>
+              </TableRow>
+            ) : (
+              filteredPets.map((pet) => (
+                <TableRow key={pet._id} className="hover:bg-slate-50 cursor-pointer" onClick={() => navigate('pet-detail', pet._id)}>
+                  <TableCell className="font-medium">
+                    <div className="flex items-center gap-3">
+                      <Avatar className="h-10 w-10 border border-slate-200">
+                        <AvatarImage src={getImageUrl(pet.photos?.[0])} alt={pet.name} className="object-cover" />
+                        <AvatarFallback>{pet.name.substring(0, 2).toUpperCase()}</AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <p className="font-semibold text-slate-900">{pet.name}</p>
+                        <p className="text-xs text-slate-500">ID: {pet._id.substring(0, 8)}...</p>
                       </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-2">
-                        {pet.species === 'Dog' ? (
-                          <Dog className="w-4 h-4 text-gray-600" />
-                        ) : (
-                          <Cat className="w-4 h-4 text-gray-600" />
-                        )}
-                        <span className="text-sm text-gray-700">{pet.species}</span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-700">{pet.breed || 'N/A'}</td>
-                    <td className="px-6 py-4 text-sm text-gray-700">{pet.gender}</td>
-                    <td className="px-6 py-4">
-                      <span
-                        className={`inline-flex px-2.5 py-1 rounded-full text-xs font-medium ${
-                          pet.adoptionStatus === 'Available'
-                            ? 'bg-green-100 text-green-700'
-                            : pet.adoptionStatus === 'Pending'
-                            ? 'bg-yellow-100 text-yellow-700'
-                            : 'bg-gray-100 text-gray-700'
-                        }`}
-                      >
-                        {pet.adoptionStatus}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-700">{pet.views || 0}</td>
-                    <td className="px-6 py-4 text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            navigate('edit-pet', pet._id);
-                          }}
-                          className="p-1.5 text-gray-600 hover:text-pink-600 hover:bg-pink-50 rounded transition-colors"
-                          title="Edit"
+                    </div>
+                  </TableCell>
+                  <TableCell>{pet.species}</TableCell>
+                  <TableCell>{pet.breed}</TableCell>
+                  <TableCell>{pet.age} yrs</TableCell>
+                  <TableCell>{pet.gender}</TableCell>
+                  <TableCell>
+                    <Badge variant={getStatusVariant(pet.adoptionStatus)}>
+                      {pet.adoptionStatus}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                        <Button variant="ghost" className="h-8 w-8 p-0">
+                          <span className="sr-only">Open menu</span>
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); navigate('pet-detail', pet._id); }}>
+                          <Eye className="mr-2 h-4 w-4" /> View Details
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); navigate('edit-pet', pet._id); }}>
+                          <Edit className="mr-2 h-4 w-4" /> Edit Pet
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          className="text-red-600 focus:text-red-600"
+                          onClick={(e) => { e.stopPropagation(); handleDelete(pet._id, pet.name); }}
                         >
-                          <Edit className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={(e) => handleDelete(e, pet._id, pet.name)}
-                          className="p-1.5 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
-                          title="Delete"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+                          <Trash2 className="mr-2 h-4 w-4" /> Delete Pet
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
       </div>
 
-      {/* Results Count */}
       <div className="mt-4 text-sm text-gray-500">
         Showing {filteredPets.length} of {pets.length} pets
       </div>

@@ -1,271 +1,592 @@
 import React, { useState, useEffect } from 'react';
-import { Dog, Cat, ArrowLeft } from 'lucide-react';
+import { useParams } from 'react-router-dom';
+import { Dog, Cat, ArrowLeft, Upload, X, Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
 import { useAppContext } from '../context/AppContext';
+import BreedAutocomplete from '../components/common/BreedAutocomplete';
+import { validatePetForm } from '../lib/validation';
+import { cn, getImageUrl } from '../lib/utils';
+import FormField from '../components/ui/form-field';
+import { petAPI } from '../services/api';
+
+// ---------------------------------------------------------------------------
+// Page-local primitives (pet-form specific styling)
+// ---------------------------------------------------------------------------
+
+const PetInput = ({ error, className, ...props }) => (
+  <input
+    {...props}
+    className={cn(
+      'w-full px-3 py-2 bg-white border rounded-md text-sm text-slate-800 placeholder-slate-300',
+      'focus:outline-none focus:ring-1 transition-colors',
+      error
+        ? 'border-red-400 focus:ring-red-400 focus:border-red-400'
+        : 'border-slate-200 focus:ring-pink-400 focus:border-pink-400',
+      className
+    )}
+  />
+);
+
+const PetSelect = ({ error, children, className, ...props }) => (
+  <select
+    {...props}
+    className={cn(
+      'w-full px-3 py-2 bg-white border rounded-md text-sm text-slate-800',
+      'focus:outline-none focus:ring-1 transition-colors appearance-none',
+      "bg-[url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E\")] bg-no-repeat bg-[right_12px_center]",
+      error
+        ? 'border-red-400 focus:ring-red-400 focus:border-red-400'
+        : 'border-slate-200 focus:ring-pink-400 focus:border-pink-400',
+      className
+    )}
+  >
+    {children}
+  </select>
+);
+
+const SectionCard = ({ title, hint, children, className }) => (
+  <div className={cn('bg-white rounded-xl border border-slate-200 overflow-hidden', className)}>
+    <div className="px-6 py-5 border-b border-slate-100">
+      <h2 className="text-sm font-semibold text-slate-800">{title}</h2>
+      {hint && <p className="text-xs text-slate-400 mt-0.5">{hint}</p>}
+    </div>
+    <div className="px-6 py-5">{children}</div>
+  </div>
+);
+
+// ---------------------------------------------------------------------------
+// Page
+// ---------------------------------------------------------------------------
 
 const EditPet = () => {
-  const { pets, updatePet, navigate, selectedPetId } = useAppContext();
-  const pet = pets.find((p) => p._id === selectedPetId);
-  const [formData, setFormData] = useState(pet || {});
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { petId } = useParams();
+  const { pets, updatePet, navigate } = useAppContext();
+  const pet = pets.find((p) => p._id === petId);
 
+  const [formData, setFormData] = useState({
+    name: '',
+    species: 'Dog',
+    breed: '',
+    gender: 'Male',
+    size: 'Medium',
+    color: '',
+    age: '',
+    weight: '',
+    description: '',
+    adoptionFee: '0',
+    specialNeeds: '',
+    adoptionStatus: 'Available',
+    goodWithKids: false,
+    goodWithPets: false,
+    vaccinated: false,
+    neutered: false,
+    houseTrained: false,
+    energyLevel: 'Moderate',
+  });
+
+  const [currentPhotos, setCurrentPhotos] = useState([]);
+  const [newPhotos, setNewPhotos] = useState([]);
+  const [previewUrls, setPreviewUrls] = useState([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errors, setErrors] = useState({});
+
+  // Populate form when pet data is available
   useEffect(() => {
     if (pet) {
-      setFormData(pet);
+      setFormData({
+        name: pet.name || '',
+        species: pet.species || 'Dog',
+        breed: pet.breed || '',
+        gender: pet.gender || 'Male',
+        size: pet.size || 'Medium',
+        color: pet.color || '',
+        age: pet.age?.toString() || '',
+        weight: pet.weightHistory?.[pet.weightHistory.length - 1]?.weight?.toString() || '',
+        description: pet.description || '',
+        adoptionFee: pet.adoptionFee?.toString() || '0',
+        specialNeeds: pet.specialNeeds || '',
+        adoptionStatus: pet.adoptionStatus || 'Available',
+        goodWithKids: pet.goodWithKids || false,
+        goodWithPets: pet.goodWithPets || false,
+        vaccinated: pet.vaccinated || false,
+        neutered: pet.neutered || false,
+        houseTrained: pet.houseTrained || false,
+        energyLevel: pet.energyLevel || 'Moderate',
+      });
+      setCurrentPhotos(pet.photos || []);
     }
   }, [pet]);
 
+  // -------------------------------------------------------------------------
+  // Guard — pet not found
+  // -------------------------------------------------------------------------
+
   if (!pet) {
     return (
-      <div className="text-center py-12">
-        <h2 className="text-xl font-bold text-gray-900 mb-4">Pet Not Found</h2>
-        <button
-          onClick={() => navigate('inventory')}
-          className="text-pink-600 hover:text-pink-700 font-medium text-sm"
-        >
-          Back to Inventory
-        </button>
+      <div className="min-h-screen bg-slate-50/60 flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-xl font-bold text-slate-900 mb-4">Pet Not Found</h2>
+          <button
+            onClick={() => navigate('inventory')}
+            className="text-pink-600 hover:text-pink-700 font-medium text-sm cursor-pointer"
+          >
+            Back to Inventory
+          </button>
+        </div>
       </div>
     );
   }
 
+  // -------------------------------------------------------------------------
+  // Handlers
+  // -------------------------------------------------------------------------
+
+  const clearFieldError = (fieldName) => {
+    if (errors[fieldName]) {
+      setErrors((prev) => ({ ...prev, [fieldName]: undefined }));
+    }
+  };
+
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: type === 'checkbox' ? checked : value
-    }));
+    clearFieldError(name);
+    if (name === 'species') {
+      setFormData((prev) => ({ ...prev, species: value, breed: '' }));
+    } else {
+      setFormData((prev) => ({ ...prev, [name]: type === 'checkbox' ? checked : value }));
+    }
+  };
+
+  const handleBreedChange = (val) => {
+    clearFieldError('breed');
+    setFormData((prev) => ({ ...prev, breed: val }));
+  };
+
+  const handlePhotoChange = (e) => {
+    const files = Array.from(e.target.files);
+    const totalPhotos = currentPhotos.length + newPhotos.length + files.length;
+    if (totalPhotos > 5) {
+      setErrors((prev) => ({ ...prev, photos: 'Maximum 5 photos allowed' }));
+      return;
+    }
+    const oversizedFiles = files.filter((f) => f.size > 10 * 1024 * 1024);
+    if (oversizedFiles.length > 0) {
+      setErrors((prev) => ({
+        ...prev,
+        photos: `Files too large (max 10 MB): ${oversizedFiles.map((f) => f.name).join(', ')}`,
+      }));
+      return;
+    }
+    setErrors((prev) => ({ ...prev, photos: undefined }));
+    setNewPhotos((prev) => [...prev, ...files]);
+    setPreviewUrls((prev) => [...prev, ...files.map((f) => URL.createObjectURL(f))]);
+  };
+
+  const removeNewPhoto = (index) => {
+    setNewPhotos((prev) => prev.filter((_, i) => i !== index));
+    setPreviewUrls((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const removeCurrentPhoto = async (photoUrl) => {
+    try {
+      if (confirm('Are you sure you want to remove this photo?')) {
+        await petAPI.removePhoto(petId, photoUrl);
+        setCurrentPhotos((prev) => prev.filter((url) => url !== photoUrl));
+      }
+    } catch (error) {
+      console.error('Failed to remove photo', error);
+      setErrors((prev) => ({ ...prev, photos: 'Failed to remove photo. Please try again.' }));
+    }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    if (!formData.name.trim() || !formData.breed.trim() || !formData.description.trim()) {
-      alert('Please fill in all required fields');
+    // Validate form
+    const validation = validatePetForm(formData);
+    if (!validation.success) {
+      setErrors(validation.errors);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      toast.error('Please fix the validation errors before submitting');
       return;
     }
     
+    setErrors({});
+    setIsSubmitting(true);
+    
     try {
-      setIsSubmitting(true);
-      await updatePet(selectedPetId, {
-        name: formData.name,
-        species: formData.species,
-        breed: formData.breed,
-        gender: formData.gender,
-        size: formData.size,
-        color: formData.color,
-        age: parseInt(formData.age) || 0,
-        description: formData.description,
-        adoptionFee: parseFloat(formData.adoptionFee) || 0,
-        adoptionStatus: formData.adoptionStatus,
-        goodWithKids: formData.goodWithKids,
-        goodWithPets: formData.goodWithPets,
-        vaccinated: formData.vaccinated,
-        neutered: formData.neutered,
-        energyLevel: formData.energyLevel
+      const data = new FormData();
+      Object.keys(formData).forEach((key) => {
+        data.append(key, typeof formData[key] === 'boolean' ? formData[key].toString() : formData[key]);
       });
+      currentPhotos.forEach((url) => data.append('existingPhotos', url));
+      newPhotos.forEach((photo) => data.append('photos', photo));
+      
+      // Use toast.promise for loading, success, and error states
+      await toast.promise(
+        updatePet(petId, data),
+        {
+          loading: `Updating ${formData.name || 'pet'} information...`,
+          success: `${formData.name || 'Pet'} has been successfully updated!`,
+          error: (err) => err.message || 'Failed to update pet. Please try again.',
+        }
+      );
     } catch (error) {
-      console.error('Error updating pet:', error);
+      console.error('Failed to update pet:', error);
     } finally {
       setIsSubmitting(false);
     }
   };
 
+  const characteristics = [
+    { name: 'goodWithKids', label: 'Good with Kids' },
+    { name: 'goodWithPets', label: 'Good with Pets' },
+    { name: 'vaccinated', label: 'Vaccinated' },
+    { name: 'neutered', label: 'Neutered' },
+    { name: 'houseTrained', label: 'House Trained' },
+  ];
+
+  // -------------------------------------------------------------------------
+  // Render
+  // -------------------------------------------------------------------------
+
   return (
-    <div>
-      {/* Header */}
-      <button
-        onClick={() => navigate('pet-detail', selectedPetId)}
-        className="text-gray-600 hover:text-gray-900 mb-6 flex items-center gap-2 text-sm font-medium"
-      >
-        <ArrowLeft className="w-4 h-4" />
-        Back to Pet Details
-      </button>
+    <div className="min-h-screen bg-slate-50/60">
+      <div className="max-w-5xl mx-auto px-4 py-8">
 
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900 mb-1">Edit Pet</h1>
-        <p className="text-sm text-gray-500">Update {formData.name}'s information</p>
-      </div>
+        {/* Back */}
+        <button
+          onClick={() => navigate('pet-detail', petId)}
+          className="flex items-center gap-1.5 text-sm text-slate-400 hover:text-slate-700 transition-colors mb-6 cursor-pointer"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Back to Pet Details
+        </button>
 
-      {/* Form */}
-      <div className="bg-white rounded-lg border border-gray-200 p-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Pet Name */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Pet Name <span className="text-pink-600">*</span>
-            </label>
-            <input
-              type="text"
-              name="name"
-              value={formData.name}
-              onChange={handleChange}
-              required
-              className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent"
-            />
+        <div className="mb-8">
+          <h1 className="text-xl font-bold text-slate-900">Edit Pet</h1>
+          <p className="text-sm text-slate-400 mt-0.5">Update {formData.name}'s information</p>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+
+          {/* ── LEFT COLUMN ─────────────────────────────────────────────── */}
+          <div className="lg:col-span-1 flex flex-col gap-5">
+
+            {/* Pet Information */}
+            <SectionCard title="Pet Information" hint="Basic details about the pet.">
+              <div className="flex flex-col gap-4">
+
+                <FormField label="Name" required error={errors.name}>
+                  <PetInput
+                    name="name"
+                    value={formData.name}
+                    onChange={handleChange}
+                    placeholder="e.g., Buddy"
+                    error={errors.name}
+                  />
+                </FormField>
+
+                {/* Species — radio group */}
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                    Species <span className="text-pink-500 ml-0.5">*</span>
+                  </label>
+                  <div className="flex gap-2 mt-1">
+                    {['Dog', 'Cat'].map((sp) => (
+                      <label
+                        key={sp}
+                        className={cn(
+                          'flex items-center gap-2 flex-1 px-3 py-2 rounded-md border text-sm cursor-pointer transition-all',
+                          formData.species === sp
+                            ? 'border-pink-400 bg-pink-50 text-pink-600'
+                            : 'border-slate-200 text-slate-500 hover:border-slate-300'
+                        )}
+                      >
+                        <input
+                          type="radio"
+                          name="species"
+                          value={sp}
+                          checked={formData.species === sp}
+                          onChange={handleChange}
+                          className="hidden"
+                        />
+                        {sp === 'Dog' ? <Dog className="w-4 h-4" /> : <Cat className="w-4 h-4" />}
+                        {sp}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                <FormField label="Breed" required error={errors.breed}>
+                  <BreedAutocomplete
+                    value={formData.breed}
+                    onChange={handleBreedChange}
+                    species={formData.species}
+                    hasError={!!errors.breed}
+                  />
+                </FormField>
+
+                <FormField label="Color" required error={errors.color}>
+                  <PetInput
+                    name="color"
+                    value={formData.color}
+                    onChange={handleChange}
+                    placeholder="e.g., Golden"
+                    error={errors.color}
+                  />
+                </FormField>
+
+              </div>
+            </SectionCard>
+
+            {/* Adoption Details */}
+            <SectionCard title="Adoption Details">
+              <div className="flex flex-col gap-4">
+
+                <FormField label="Adoption Fee ($)" required error={errors.adoptionFee}>
+                  <PetInput
+                    name="adoptionFee"
+                    value={formData.adoptionFee}
+                    onChange={handleChange}
+                    placeholder="e.g., 250"
+                    error={errors.adoptionFee}
+                  />
+                </FormField>
+
+                <FormField label="Special Needs" hint="Leave blank if none.">
+                  <PetInput
+                    name="specialNeeds"
+                    value={formData.specialNeeds}
+                    onChange={handleChange}
+                    placeholder="Any special requirements..."
+                  />
+                </FormField>
+
+                <FormField label="Adoption Status" required error={errors.adoptionStatus}>
+                  <PetSelect
+                    name="adoptionStatus"
+                    value={formData.adoptionStatus}
+                    onChange={handleChange}
+                    error={errors.adoptionStatus}
+                  >
+                    <option>Available</option>
+                    <option>Pending</option>
+                    <option>Adopted</option>
+                  </PetSelect>
+                </FormField>
+
+              </div>
+            </SectionCard>
+
           </div>
 
-          {/* Species */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Species <span className="text-pink-600">*</span>
-            </label>
-            <div className="flex gap-4 mt-3">
-              <label className="flex items-center cursor-pointer">
-                <input
-                  type="radio"
-                  name="species"
-                  value="Dog"
-                  checked={formData.species === 'Dog'}
+          {/* ── RIGHT COLUMN ────────────────────────────────────────────── */}
+          <div className="lg:col-span-2 flex flex-col gap-5">
+
+            {/* Media */}
+            <SectionCard title="Media" hint="Upload up to 5 photos of the pet.">
+              {errors.photos && (
+                <p className="text-xs text-red-500 mb-3 font-medium">{errors.photos}</p>
+              )}
+              <div className="flex flex-wrap gap-3">
+
+                {/* Existing saved photos — resolve URL against backend origin */}
+                {currentPhotos.map((url, index) => (
+                  <div
+                    key={`curr-${index}`}
+                    className="relative w-28 h-28 rounded-lg overflow-hidden border border-slate-200 group"
+                  >
+                    <img
+                      src={getImageUrl(url)}
+                      alt={`Pet photo ${index + 1}`}
+                      className="w-full h-full object-cover"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => removeCurrentPhoto(url)}
+                      className="absolute top-1.5 right-1.5 w-6 h-6 bg-white/90 text-slate-500 hover:text-red-500 rounded-full flex items-center justify-center transition-colors border border-slate-200 cursor-pointer"
+                      title="Remove photo"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                ))}
+
+                {/* Newly selected photos — blob URL, no transformation needed */}
+                {previewUrls.map((url, index) => (
+                  <div
+                    key={`new-${index}`}
+                    className="relative w-28 h-28 rounded-lg overflow-hidden border-2 border-pink-400 group"
+                  >
+                    <img src={url} alt={`New photo ${index + 1}`} className="w-full h-full object-cover" />
+                    <button
+                      type="button"
+                      onClick={() => removeNewPhoto(index)}
+                      className="absolute top-1.5 right-1.5 w-6 h-6 bg-white/90 text-slate-500 hover:text-red-500 rounded-full flex items-center justify-center transition-colors border border-slate-200 cursor-pointer"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                ))}
+
+                {currentPhotos.length + newPhotos.length < 5 && (
+                  <label className="w-28 h-28 flex flex-col items-center justify-center border-2 border-dashed border-slate-200 rounded-lg cursor-pointer hover:border-pink-400 hover:bg-pink-50 transition-colors group">
+                    <Upload className="w-5 h-5 text-slate-300 group-hover:text-pink-400 transition-colors" />
+                    <span className="text-xs text-slate-400 group-hover:text-pink-400 mt-1.5 transition-colors font-medium">
+                      Drag or browse
+                    </span>
+                    <input type="file" accept="image/*" multiple onChange={handlePhotoChange} className="hidden" />
+                  </label>
+                )}
+              </div>
+            </SectionCard>
+
+            {/* Physical Details */}
+            <SectionCard title="Physical Details" hint="Size, age, weight and energy level.">
+              <div className="grid grid-cols-2 gap-4">
+
+                <FormField label="Gender" required>
+                  <PetSelect name="gender" value={formData.gender} onChange={handleChange}>
+                    <option>Male</option>
+                    <option>Female</option>
+                  </PetSelect>
+                </FormField>
+
+                <FormField label="Size" required>
+                  <PetSelect name="size" value={formData.size} onChange={handleChange}>
+                    <option>Small</option>
+                    <option>Medium</option>
+                    <option>Large</option>
+                  </PetSelect>
+                </FormField>
+
+                <FormField label="Age (years)" required error={errors.age}>
+                  <PetInput
+                    name="age"
+                    value={formData.age}
+                    onChange={handleChange}
+                    placeholder="e.g., 2"
+                    error={errors.age}
+                  />
+                </FormField>
+
+                <FormField label="Weight (kg)" error={errors.weight}>
+                  <PetInput
+                    name="weight"
+                    value={formData.weight}
+                    onChange={handleChange}
+                    placeholder="e.g., 10"
+                    error={errors.weight}
+                  />
+                </FormField>
+
+                <div className="col-span-2">
+                  <label className="block text-sm font-medium text-slate-700 mb-1.5">Energy Level</label>
+                  <div className="grid grid-cols-4 gap-2 mt-1">
+                    {['Low', 'Moderate', 'High', 'Very High'].map((level) => (
+                      <label
+                        key={level}
+                        className={cn(
+                          'flex items-center justify-center px-2 py-2 rounded-md border text-xs cursor-pointer transition-all text-center',
+                          formData.energyLevel === level
+                            ? 'border-pink-400 bg-pink-50 text-pink-600 font-medium'
+                            : 'border-slate-200 text-slate-500 hover:border-slate-300'
+                        )}
+                      >
+                        <input
+                          type="radio"
+                          name="energyLevel"
+                          value={level}
+                          checked={formData.energyLevel === level}
+                          onChange={handleChange}
+                          className="hidden"
+                        />
+                        {level}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+              </div>
+            </SectionCard>
+
+            {/* Characteristics */}
+            <SectionCard title="Characteristics" hint="Select all that apply to this pet.">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                {characteristics.map(({ name, label }) => (
+                  <label
+                    key={name}
+                    className={cn(
+                      'flex items-center gap-2.5 px-3 py-2.5 rounded-md border text-sm cursor-pointer transition-all',
+                      formData[name]
+                        ? 'border-pink-400 bg-pink-50 text-pink-700'
+                        : 'border-slate-200 text-slate-500 hover:border-slate-300'
+                    )}
+                  >
+                    <span
+                      className={cn(
+                        'w-4 h-4 rounded flex-shrink-0 border flex items-center justify-center transition-all',
+                        formData[name] ? 'bg-pink-500 border-pink-500' : 'border-slate-300'
+                      )}
+                    >
+                      {formData[name] && (
+                        <svg className="w-2.5 h-2.5 text-white" viewBox="0 0 12 12" fill="none">
+                          <path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                      )}
+                    </span>
+                    <input type="checkbox" name={name} checked={formData[name]} onChange={handleChange} className="hidden" />
+                    {label}
+                  </label>
+                ))}
+              </div>
+            </SectionCard>
+
+            {/* Description */}
+            <SectionCard title="Description" hint="Tell potential adopters about this pet's personality.">
+              <FormField required error={errors.description}>
+                <textarea
+                  name="description"
+                  value={formData.description}
                   onChange={handleChange}
-                  className="w-4 h-4 text-pink-600 focus:ring-pink-500"
+                  rows={4}
+                  placeholder="Describe the pet's personality, habits, and what makes them special..."
+                  className={cn(
+                    'w-full px-3 py-2.5 bg-white border rounded-md text-sm text-slate-800 placeholder-slate-300 resize-none',
+                    'focus:outline-none focus:ring-1 transition-colors',
+                    errors.description
+                      ? 'border-red-400 focus:ring-red-400 focus:border-red-400'
+                      : 'border-slate-200 focus:ring-pink-400 focus:border-pink-400'
+                  )}
                 />
-                <Dog className="w-4 h-4 ml-2 mr-1 text-gray-600" />
-                <span className="text-sm text-gray-700">Dog</span>
-              </label>
-              <label className="flex items-center cursor-pointer">
-                <input
-                  type="radio"
-                  name="species"
-                  value="Cat"
-                  checked={formData.species === 'Cat'}
-                  onChange={handleChange}
-                  className="w-4 h-4 text-pink-600 focus:ring-pink-500"
-                />
-                <Cat className="w-4 h-4 ml-2 mr-1 text-gray-600" />
-                <span className="text-sm text-gray-700">Cat</span>
-              </label>
-            </div>
-          </div>
+              </FormField>
+            </SectionCard>
 
-          {/* Breed */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Breed <span className="text-pink-600">*</span>
-            </label>
-            <input
-              type="text"
-              name="breed"
-              value={formData.breed}
-              onChange={handleChange}
-              required
-              className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent"
-            />
-          </div>
-
-          {/* Gender */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Gender <span className="text-pink-600">*</span>
-            </label>
-            <select
-              name="gender"
-              value={formData.gender}
-              onChange={handleChange}
-              className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent"
-            >
-              <option>Male</option>
-              <option>Female</option>
-            </select>
-          </div>
-
-          {/* Size */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Size <span className="text-pink-600">*</span>
-            </label>
-            <select
-              name="size"
-              value={formData.size}
-              onChange={handleChange}
-              className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent"
-            >
-              <option>Small</option>
-              <option>Medium</option>
-              <option>Large</option>
-            </select>
-          </div>
-
-          {/* Color */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Color <span className="text-pink-600">*</span>
-            </label>
-            <input
-              type="text"
-              name="color"
-              value={formData.color}
-              onChange={handleChange}
-              required
-              className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent"
-            />
-          </div>
-
-          {/* Age */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Age (years) <span className="text-pink-600">*</span>
-            </label>
-            <input
-              type="number"
-              name="age"
-              value={formData.age}
-              onChange={handleChange}
-              required
-              min="0"
-              className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent"
-            />
-          </div>
-
-          {/* Status */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Adoption Status <span className="text-pink-600">*</span>
-            </label>
-            <select
-              name="adoptionStatus"
-              value={formData.adoptionStatus}
-              onChange={handleChange}
-              className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent"
-            >
-              <option>Available</option>
-              <option>Pending</option>
-              <option>Adopted</option>
-            </select>
-          </div>
-
-          {/* Description */}
-          <div className="md:col-span-2">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Description <span className="text-pink-600">*</span>
-            </label>
-            <textarea
-              name="description"
-              value={formData.description}
-              onChange={handleChange}
-              required
-              rows="4"
-              className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent resize-none"
-            />
           </div>
         </div>
 
         {/* Action Buttons */}
-        <div className="flex flex-col sm:flex-row gap-3 mt-6 pt-6 border-t border-gray-200">
+        <div className="flex items-center gap-3 mt-6 pt-6 border-t border-slate-200">
           <button
+            type="button"
             onClick={handleSubmit}
             disabled={isSubmitting}
-            className="bg-pink-600 text-white px-6 py-2.5 rounded-lg hover:bg-pink-700 transition-colors text-sm font-medium disabled:opacity-50"
+            className="px-5 py-2 bg-pink-600 text-white text-sm font-medium rounded-md hover:bg-pink-700 active:bg-pink-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 cursor-pointer"
+            style={{ boxShadow: 'none' }}
           >
-            {isSubmitting ? 'Updating...' : 'Update Pet'}
+            {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
+            {isSubmitting ? 'Updating Pet...' : 'Update Pet'}
           </button>
           <button
-            onClick={() => navigate('pet-detail', selectedPetId)}
             type="button"
-            className="bg-gray-100 text-gray-700 px-6 py-2.5 rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium"
+            onClick={() => navigate('pet-detail', petId)}
+            className="px-5 py-2 bg-white border border-slate-200 text-slate-600 text-sm font-medium rounded-md hover:bg-slate-50 transition-colors cursor-pointer"
           >
             Cancel
           </button>
         </div>
+
       </div>
     </div>
   );

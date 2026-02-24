@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { AppProvider, useAppContext } from './context/AppContext';
+import { Routes, Route, Navigate } from 'react-router-dom';
+import { AppProvider } from './context/AppContext';
 import AdminLayout from './components/layout/AdminLayout';
-import Toast from './components/common/Toast';
+import { Toaster } from 'sonner';
 import Login from './pages/Login';
 import { authAPI } from './services/api';
 
@@ -12,27 +13,27 @@ import AddPet from './pages/AddPet';
 import EditPet from './pages/EditPet';
 import PetDetail from './pages/PetDetail';
 import Settings from './pages/Settings';
+import Applications from './pages/Applications';
+import Vaccinations from './pages/Vaccinations';
+import Reports from './pages/Reports';
 
 // Page Router Component
 const PageRouter = () => {
-  const { currentPage } = useAppContext();
-
-  switch (currentPage) {
-    case 'dashboard':
-      return <Dashboard />;
-    case 'inventory':
-      return <Inventory />;
-    case 'add-pet':
-      return <AddPet />;
-    case 'pet-detail':
-      return <PetDetail />;
-    case 'edit-pet':
-      return <EditPet />;
-    case 'settings':
-      return <Settings />;
-    default:
-      return <Dashboard />;
-  }
+  return (
+    <Routes>
+      <Route path="/" element={<Dashboard />} />
+      <Route path="/dashboard" element={<Navigate to="/" replace />} />
+      <Route path="/inventory" element={<Inventory />} />
+      <Route path="/add-pet" element={<AddPet />} />
+      <Route path="/pet/:petId" element={<PetDetail />} />
+      <Route path="/edit-pet/:petId" element={<EditPet />} />
+      <Route path="/applications" element={<Applications />} />
+      <Route path="/vaccinations" element={<Vaccinations />} />
+      <Route path="/reports" element={<Reports />} />
+      <Route path="/settings" element={<Settings />} />
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
+  );
 };
 
 // Main App Component with Authentication
@@ -46,14 +47,14 @@ function App() {
     const checkAuth = () => {
       const isAuth = authAPI.isAuthenticated();
       const storedUser = authAPI.getStoredUser();
-      
+
       if (isAuth && storedUser) {
         setUser(storedUser);
         setIsAuthenticated(true);
       }
       setIsLoading(false);
     };
-    
+
     checkAuth();
   }, []);
 
@@ -71,8 +72,8 @@ function App() {
   // Show loading spinner while checking authentication
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-pink-600"></div>
       </div>
     );
   }
@@ -88,15 +89,9 @@ function App() {
       <AdminLayout user={user} onLogout={handleLogout}>
         <PageRouter />
       </AdminLayout>
-      <ToastContainer />
+      <Toaster richColors position="bottom-right" />
     </AppProvider>
   );
 }
-
-// Toast Consumer Component
-const ToastContainer = () => {
-  const { toast } = useAppContext();
-  return <Toast message={toast?.message} type={toast?.type} />;
-};
 
 export default App;
