@@ -16,6 +16,7 @@ import Settings from './pages/Settings';
 import Applications from './pages/Applications';
 import Vaccinations from './pages/Vaccinations';
 import Reports from './pages/Reports';
+import ApplyForAdoption from './pages/ApplyForAdoption';
 
 // Page Router Component
 const PageRouter = () => {
@@ -27,6 +28,7 @@ const PageRouter = () => {
       <Route path="/add-pet" element={<AddPet />} />
       <Route path="/pet/:petId" element={<PetDetail />} />
       <Route path="/edit-pet/:petId" element={<EditPet />} />
+      <Route path="/apply/:petId" element={<ApplyForAdoption />} />
       <Route path="/applications" element={<Applications />} />
       <Route path="/vaccinations" element={<Vaccinations />} />
       <Route path="/reports" element={<Reports />} />

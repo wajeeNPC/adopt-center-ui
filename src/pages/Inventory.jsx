@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { Plus, MoreHorizontal, Eye, Edit, Trash2 } from 'lucide-react';
+import { MoreHorizontal, Eye, Edit, Trash2, Plus, Download, Upload } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '../components/ui/avatar';
 import { getImageUrl } from '../lib/utils';
+import PageActions from '../components/common/PageActions';
 import {
   Table,
   TableBody,
@@ -45,6 +46,24 @@ const Inventory = () => {
     }
   };
 
+  const handleExportCSV = () => {
+    const headers = ['Name', 'Species', 'Breed', 'Status', 'Gender', 'Age', 'Adoption Fee'];
+    const rows = pets.map((p) => [p.name, p.species, p.breed, p.adoptionStatus, p.gender, p.age, p.adoptionFee]);
+    const csv = 'data:text/csv;charset=utf-8,' + headers.join(',') + '\n' + rows.map((r) => r.join(',')).join('\n');
+    const link = document.createElement('a');
+    link.setAttribute('href', encodeURI(csv));
+    link.setAttribute('download', 'pet_inventory.csv');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const actionItems = [
+    { label: 'Add Pet', icon: Plus, onClick: () => navigate('add-pet') },
+    { separator: true },
+    { label: 'Export CSV', icon: Download, onClick: handleExportCSV },
+  ];
+
   const getStatusVariant = (status) => {
     switch (status) {
       case 'Available': return 'success';
@@ -61,10 +80,7 @@ const Inventory = () => {
           <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Pet Inventory</h1>
           <p className="text-slate-500 mt-1">Manage and track all pets in the shelter.</p>
         </div>
-        <Button onClick={() => navigate('add-pet')} className="bg-pink-600 hover:bg-pink-700 shadow-none">
-          <Plus className="w-4 h-4 mr-2" />
-          Add Pet
-        </Button>
+        <PageActions items={actionItems} />
       </div>
 
       <FilterBar

@@ -51,7 +51,7 @@ export const AppProvider = ({ children }) => {
 
   const navigate = (page, petId = null) => {
     window.scrollTo(0, 0);
-    
+
     // Map page names to routes
     switch (page) {
       case 'dashboard':
@@ -68,6 +68,9 @@ export const AppProvider = ({ children }) => {
         break;
       case 'edit-pet':
         if (petId) navigateRouter(`/edit-pet/${petId}`);
+        break;
+      case 'apply':
+        if (petId) navigateRouter(`/apply/${petId}`);
         break;
       case 'applications':
         navigateRouter('/applications');

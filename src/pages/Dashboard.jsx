@@ -8,6 +8,7 @@ import { Badge } from '../components/ui/badge';
 import { cn } from '../lib/utils';
 import api from '../services/api';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import PageActions from '../components/common/PageActions';
 
 const Dashboard = () => {
   const { pets, navigate } = useAppContext(); // pets from context might be stale or limited? 
@@ -168,16 +169,14 @@ const Dashboard = () => {
           <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Dashboard</h1>
           <p className="text-slate-500 mt-1">Real-time overview of your shelter.</p>
         </div>
-        <div className="flex items-center gap-3">
-          <Button variant="outline" onClick={handleExport}>
-            <Download className="w-4 h-4 mr-2" />
-            Export Inventory
-          </Button>
-          <Button onClick={() => navigate('add-pet')} className="bg-pink-600 hover:bg-pink-700 text-white shadow-lg shadow-pink-200">
-            <Plus className="w-5 h-5 mr-1" />
-            Add New Pet
-          </Button>
-        </div>
+        <PageActions
+          items={[
+            { label: 'Add New Pet', icon: Plus, onClick: () => navigate('add-pet') },
+            { separator: true },
+            { label: 'Export Inventory', icon: Download, onClick: handleExport },
+            { label: 'View Applications', icon: FileText, onClick: () => navigate('applications') },
+          ]}
+        />
       </div>
 
       {/* KPI Stats Grid */}

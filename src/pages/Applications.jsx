@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Eye, CheckCircle, XCircle, MoreHorizontal, FileText } from 'lucide-react';
+import { Eye, CheckCircle, XCircle, MoreHorizontal, FileText, Award } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
 import {
@@ -63,6 +63,22 @@ const Applications = () => {
         }
     };
 
+    const handleFinalize = async (id, petName) => {
+        try {
+            await toast.promise(
+                api.applications.finalizeAdoption(id),
+                {
+                    loading: 'Finalizing adoption...',
+                    success: `Adoption finalized! ${petName || 'Pet'} has been transferred to the adopter.`,
+                    error: (err) => err.message || 'Failed to finalize adoption.',
+                }
+            );
+            fetchApplications();
+        } catch (error) {
+            console.error('Error finalizing adoption:', error);
+        }
+    };
+
     const filteredApps = applications.filter(app => {
         const applicantName = app.applicant?.name || 'Unknown';
         const petName = app.pet?.name || 'Unknown';
@@ -76,6 +92,8 @@ const Applications = () => {
             case 'Approved': return 'success';
             case 'Rejected': return 'destructive';
             case 'Under Review': return 'warning';
+            case 'Withdrawn': return 'secondary';
+            case 'Adopted': return 'success';
             default: return 'secondary';
         }
     };
@@ -180,9 +198,17 @@ const Applications = () => {
                                                             <XCircle className="mr-2 h-4 w-4 text-rose-600" /> Reject
                                                         </DropdownMenuItem>
                                                         <DropdownMenuItem onClick={() => handleStatusChange(app._id, 'Under Review')}>
-                                                            <FileText className="mr-2 h-4 w-4 text-amber-600" /> Mark Review
+                                                            <FileText className="mr-2 h-4 w-4 text-amber-600" /> Mark Under Review
                                                         </DropdownMenuItem>
                                                     </>
+                                                )}
+                                                {app.status === 'Approved' && (
+                                                    <DropdownMenuItem
+                                                        onClick={() => handleFinalize(app._id, app.pet?.name)}
+                                                        className="text-emerald-700 focus:text-emerald-700 focus:bg-emerald-50"
+                                                    >
+                                                        <Award className="mr-2 h-4 w-4 text-emerald-600" /> Finalize Adoption
+                                                    </DropdownMenuItem>
                                                 )}
                                             </DropdownMenuContent>
                                         </DropdownMenu>

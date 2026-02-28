@@ -1,4 +1,4 @@
-const API_BASE_URL = 'http://localhost:5000/api/v1/adoption-center';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api/v1/adoption-center';
 
 // Helper function to get auth token
 const getToken = () => {
@@ -85,15 +85,15 @@ export const petAPI = {
   create: async (petData) => {
     // Check if petData is FormData (for file uploads)
     const isFormData = petData instanceof FormData;
-    
+
     // For FormData, we need to exclude Content-Type header to let browser set it with boundary
     const token = getToken();
     const headers = {};
-    
+
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
     }
-    
+
     // Only set Content-Type for JSON data
     if (!isFormData) {
       headers['Content-Type'] = 'application/json';
@@ -209,11 +209,31 @@ export const petAPI = {
 };
 
 // Application API
+// NOTE: Routes are mounted at /api/v1/adoption-applications (NOT /adoption-center/applications)
+const ADOPTION_APP_BASE = 'http://localhost:5000/api/v1/adoption-applications';
+
 export const applicationAPI = {
-  // Get center applications
+  // Submit a new adoption application (center staff submits on behalf of applicant)
+  submitApplication: async (applicationData) => {
+    const response = await fetch(`${ADOPTION_APP_BASE}/`, {
+      method: 'POST',
+      headers: createHeaders(true),
+      body: JSON.stringify(applicationData),
+    });
+
+    const result = await response.json();
+    if (!response.ok) {
+      throw new Error(result.message || 'Failed to submit application');
+    }
+    return result;
+  },
+
+  // Get all applications for the center
   getCenterApplications: async (filters = {}) => {
     const queryParams = new URLSearchParams(filters).toString();
-    const url = queryParams ? `${API_BASE_URL}/applications?${queryParams}` : `${API_BASE_URL}/applications`;
+    const url = queryParams
+      ? `${ADOPTION_APP_BASE}/center/applications?${queryParams}`
+      : `${ADOPTION_APP_BASE}/center/applications`;
 
     const response = await fetch(url, {
       method: 'GET',
@@ -227,9 +247,23 @@ export const applicationAPI = {
     return result;
   },
 
-  // Review application
+  // Get single application details (center view)
+  getApplicationDetails: async (id) => {
+    const response = await fetch(`${ADOPTION_APP_BASE}/center/${id}`, {
+      method: 'GET',
+      headers: createHeaders(true),
+    });
+
+    const result = await response.json();
+    if (!response.ok) {
+      throw new Error(result.message || 'Failed to fetch application details');
+    }
+    return result;
+  },
+
+  // Review (approve/reject) an application
   review: async (id, status, reviewNotes) => {
-    const response = await fetch(`${API_BASE_URL}/applications/${id}/review`, {
+    const response = await fetch(`${ADOPTION_APP_BASE}/center/${id}/review`, {
       method: 'PATCH',
       headers: createHeaders(true),
       body: JSON.stringify({ status, reviewNotes }),
@@ -240,14 +274,28 @@ export const applicationAPI = {
       throw new Error(result.message || 'Failed to review application');
     }
     return result;
-  }
+  },
+
+  // Finalize adoption — transfers pet ownership to applicant
+  finalizeAdoption: async (id) => {
+    const response = await fetch(`${ADOPTION_APP_BASE}/center/${id}/finalize`, {
+      method: 'POST',
+      headers: createHeaders(true),
+    });
+
+    const result = await response.json();
+    if (!response.ok) {
+      throw new Error(result.message || 'Failed to finalize adoption');
+    }
+    return result;
+  },
 };
 
 export const resourcesAPI = {
   getBreeds: async (species = null) => {
     // Resources endpoint is at /api/v1/resources, not under adoption-center
     const baseUrl = 'http://localhost:5000/api/v1/resources';
-    const url = species 
+    const url = species
       ? `${baseUrl}/breeds?species=${encodeURIComponent(species)}`
       : `${baseUrl}/breeds`;
     const response = await fetch(url, {

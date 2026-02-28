@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { ArrowLeft, Edit, Heart, Share2 } from 'lucide-react';
+import { ArrowLeft, Edit, Heart, Share2, ClipboardList } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
 import { getImageUrl } from '../lib/utils';
 
 const PetDetail = () => {
   const { petId } = useParams();
-  const { pets, navigate } = useAppContext();
+  const { pets, navigate, fetchPets } = useAppContext();
   const pet = pets.find((p) => p._id === petId);
   const [activeImage, setActiveImage] = useState(0);
 
@@ -141,18 +141,22 @@ const PetDetail = () => {
                   <Edit className="w-4 h-4" />
                   Edit Pet Information
                 </button>
-                {/* Adopt Link - In a real app this might go to a public page, but here we can link to 'applications' or just show a modal? 
-                    The plan says: link to adoption application flow (potentially redirecting to /adoption/apply/:petId).
-                    Since this is the ADMIN/CENTER view, maybe "Start Application"?
-                    Or simply navigate to a new application form pre-filled?
-                    For now, I'll add a button that could conceptually launch it.
-                 */}
-                <button
-                  className="bg-pink-600 text-white px-6 py-3 rounded-lg hover:bg-pink-700 transition-colors text-sm font-medium shadow-md shadow-pink-200 cursor-pointer"
-                  onClick={() => alert("To start an adoption application, please use the Public Portal or go to Applications > New Application.")}
-                >
-                  Start Adoption Process
-                </button>
+
+                {/* Start adoption — only available when pet is Available */}
+                {pet.adoptionStatus === 'Available' ? (
+                  <button
+                    className="bg-pink-600 text-white px-6 py-3 rounded-lg hover:bg-pink-700 transition-colors text-sm font-medium shadow-md shadow-pink-200 flex items-center justify-center gap-2 cursor-pointer"
+                    onClick={() => navigate('apply', pet._id)}
+                  >
+                    <ClipboardList className="w-4 h-4" />
+                    Start Adoption Process
+                  </button>
+                ) : (
+                  <div className="flex items-center px-5 py-3 rounded-lg bg-slate-100 text-slate-500 text-sm font-medium gap-2">
+                    <ClipboardList className="w-4 h-4" />
+                    {pet.adoptionStatus === 'Pending' ? 'Application Pending' : 'Already Adopted'}
+                  </div>
+                )}
               </div>
             </div>
           </div>
