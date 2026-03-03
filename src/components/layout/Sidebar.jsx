@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { LayoutGrid, Dog, FileText, Syringe, BarChart, Settings, PawPrint, ChevronRight, ChevronLeft, LogOut } from 'lucide-react';
+import { LayoutGrid, Dog, FileText, Syringe, BarChart, Settings, Users, PawPrint, ChevronRight, ChevronLeft, LogOut } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAppContext } from '../../context/AppContext';
 
@@ -18,6 +18,7 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
     if (path.startsWith('/applications')) return 'applications';
     if (path.startsWith('/vaccinations')) return 'vaccinations';
     if (path.startsWith('/reports')) return 'reports';
+    if (path.startsWith('/users')) return 'users';
     if (path.startsWith('/settings')) return 'settings';
     return 'dashboard';
   };
@@ -33,6 +34,7 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
   ];
 
   const systemItems = [
+    { icon: Users, label: 'User Management', page: 'users' },
     { icon: Settings, label: 'Settings', page: 'settings' },
   ];
 
@@ -45,6 +47,7 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
         inventory: '/inventory',
         applications: '/applications',
         vaccinations: '/vaccinations',
+        users: '/users',
         reports: '/reports',
         settings: '/settings',
       };

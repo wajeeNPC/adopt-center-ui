@@ -307,9 +307,106 @@ export const resourcesAPI = {
   }
 };
 
+// User Management API (for adoption center admins/owners to manage their staff)
+export const userManagementAPI = {
+  // Get all users in the adoption center
+  getUsers: async () => {
+    const response = await fetch(`${API_BASE_URL}/users`, {
+      method: 'GET',
+      headers: createHeaders(true),
+    });
+
+    const result = await response.json();
+    if (!response.ok) {
+      throw new Error(result.message || 'Failed to fetch users');
+    }
+
+    return result;
+  },
+
+  // Invite a new user
+  inviteUser: async (data) => {
+    const response = await fetch(`${API_BASE_URL}/users/invite`, {
+      method: 'POST',
+      headers: createHeaders(true),
+      body: JSON.stringify(data),
+    });
+
+    const result = await response.json();
+    if (!response.ok) {
+      throw new Error(result.message || 'Failed to invite user');
+    }
+
+    return result;
+  },
+
+  // Get user by ID
+  getUser: async (userId) => {
+    const response = await fetch(`${API_BASE_URL}/users/${userId}`, {
+      method: 'GET',
+      headers: createHeaders(true),
+    });
+
+    const result = await response.json();
+    if (!response.ok) {
+      throw new Error(result.message || 'Failed to fetch user');
+    }
+
+    return result;
+  },
+
+  // Update user
+  updateUser: async (userId, data) => {
+    const response = await fetch(`${API_BASE_URL}/users/${userId}`, {
+      method: 'PUT',
+      headers: createHeaders(true),
+      body: JSON.stringify(data),
+    });
+
+    const result = await response.json();
+    if (!response.ok) {
+      throw new Error(result.message || 'Failed to update user');
+    }
+
+    return result;
+  },
+
+  // Remove user
+  removeUser: async (userId) => {
+    const response = await fetch(`${API_BASE_URL}/users/${userId}`, {
+      method: 'DELETE',
+      headers: createHeaders(true),
+    });
+
+    const result = await response.json();
+    if (!response.ok) {
+      throw new Error(result.message || 'Failed to remove user');
+    }
+
+    return result;
+  },
+
+  // Resend invite
+  resendInvite: async (userId) => {
+    const response = await fetch(`${API_BASE_URL}/users/${userId}/resend-invite`, {
+      method: 'POST',
+      headers: createHeaders(true),
+    });
+
+    const result = await response.json();
+    if (!response.ok) {
+      throw new Error(result.message || 'Failed to resend invite');
+    }
+
+    return result;
+  },
+};
+
 export default {
   auth: authAPI,
   pet: petAPI,
   applications: applicationAPI,
-  resources: resourcesAPI
+  resources: resourcesAPI,
+  userManagement: userManagementAPI
 };
+

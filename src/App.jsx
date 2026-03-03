@@ -4,9 +4,10 @@ import { AppProvider } from './context/AppContext';
 import AdminLayout from './components/layout/AdminLayout';
 import { Toaster } from 'sonner';
 import Login from './pages/Login';
+import Signup from './pages/Signup';
 import { authAPI } from './services/api';
 
-// Pages
+// Adoption Center Pages
 import Dashboard from './pages/Dashboard';
 import Inventory from './pages/Inventory';
 import AddPet from './pages/AddPet';
@@ -17,9 +18,11 @@ import Applications from './pages/Applications';
 import Vaccinations from './pages/Vaccinations';
 import Reports from './pages/Reports';
 import ApplyForAdoption from './pages/ApplyForAdoption';
+import UserManagement from './pages/UserManagement';
+import EditUser from './pages/EditUser';
 
-// Page Router Component
-const PageRouter = () => {
+// Adoption Center Page Router Component
+const AdoptionCenterRouter = () => {
   return (
     <Routes>
       <Route path="/" element={<Dashboard />} />
@@ -33,6 +36,8 @@ const PageRouter = () => {
       <Route path="/vaccinations" element={<Vaccinations />} />
       <Route path="/reports" element={<Reports />} />
       <Route path="/settings" element={<Settings />} />
+      <Route path="/users" element={<UserManagement />} />
+      <Route path="/edit-user/:userId" element={<EditUser />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
@@ -80,16 +85,22 @@ function App() {
     );
   }
 
-  // Show login page if not authenticated
+  // Show login/signup pages if not authenticated
   if (!isAuthenticated) {
-    return <Login onLogin={handleLogin} />;
+    return (
+      <Routes>
+        <Route path="/login" element={<Login onLogin={handleLogin} />} />
+        <Route path="/signup" element={<Signup />} />
+        <Route path="*" element={<Navigate to="/login" replace />} />
+      </Routes>
+    );
   }
 
-  // Show admin dashboard if authenticated
+  // Show adoption center dashboard if authenticated
   return (
     <AppProvider>
       <AdminLayout user={user} onLogout={handleLogout}>
-        <PageRouter />
+        <AdoptionCenterRouter />
       </AdminLayout>
       <Toaster richColors position="bottom-right" />
     </AppProvider>

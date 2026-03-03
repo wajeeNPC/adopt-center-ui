@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
 import { Eye, EyeOff, AlertCircle } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { authAPI } from '../services/api';
 
 const Login = ({ onLogin }) => {
+  const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -30,6 +32,9 @@ const Login = ({ onLogin }) => {
       const result = await authAPI.login(email, password);
       
       if (result.success && result.user) {
+        // Store user type in localStorage
+        localStorage.setItem('userType', 'adoptionCenter');
+        
         onLogin({
           email: result.user.email,
           name: `${result.user.firstName} ${result.user.lastName}`,
@@ -38,7 +43,7 @@ const Login = ({ onLogin }) => {
           role: result.user.role,
           adoptionCenterId: result.user.adoptionCenterId,
           adoptionCenterName: result.user.adoptionCenterName
-        });
+        }, 'adoptionCenter');
       } else {
         setError('Login failed. Please try again.');
       }
@@ -148,6 +153,7 @@ const Login = ({ onLogin }) => {
             Don't have an account?{' '}
             <button
               type="button"
+              onClick={() => navigate('/signup')}
               className="text-pink-600 hover:text-pink-700 font-medium cursor-pointer"
               disabled={isLoading}
             >
