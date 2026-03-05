@@ -289,6 +289,36 @@ export const applicationAPI = {
     }
     return result;
   },
+
+  // Submit application on behalf of a mobile user (adoption center staff)
+  centerSubmitApplication: async (applicationData) => {
+    const response = await fetch(`${ADOPTION_APP_BASE}/center/submit`, {
+      method: 'POST',
+      headers: createHeaders(true),
+      body: JSON.stringify(applicationData),
+    });
+
+    const result = await response.json();
+    if (!response.ok) {
+      throw new Error(result.message || 'Failed to submit application');
+    }
+    return result;
+  },
+
+  // Update application details (adoption center — edit form fields and/or applicant)
+  updateApplication: async (id, data) => {
+    const response = await fetch(`${ADOPTION_APP_BASE}/center/${id}`, {
+      method: 'PATCH',
+      headers: createHeaders(true),
+      body: JSON.stringify(data),
+    });
+
+    const result = await response.json();
+    if (!response.ok) {
+      throw new Error(result.message || 'Failed to update application');
+    }
+    return result;
+  },
 };
 
 export const resourcesAPI = {
@@ -386,6 +416,21 @@ export const userManagementAPI = {
     return result;
   },
 
+  // Search mobile app users (for adoption application user autocomplete)
+  searchMobileUsers: async (q) => {
+    const response = await fetch(`${API_BASE_URL}/users/search?q=${encodeURIComponent(q)}`, {
+      method: 'GET',
+      headers: createHeaders(true),
+    });
+
+    const result = await response.json();
+    if (!response.ok) {
+      throw new Error(result.message || 'Failed to search users');
+    }
+
+    return result;
+  },
+
   // Resend invite
   resendInvite: async (userId) => {
     const response = await fetch(`${API_BASE_URL}/users/${userId}/resend-invite`, {
@@ -402,11 +447,93 @@ export const userManagementAPI = {
   },
 };
 
+// Profile API - for current user and organization profile
+export const profileAPI = {
+  // Get current logged-in user profile
+  getCurrentUser: async () => {
+    const response = await fetch(`${API_BASE_URL}/me`, {
+      method: 'GET',
+      headers: createHeaders(true),
+    });
+
+    const result = await response.json();
+    if (!response.ok) {
+      throw new Error(result.message || 'Failed to fetch user profile');
+    }
+
+    return result;
+  },
+
+  // Update current logged-in user profile
+  updateCurrentUser: async (data) => {
+    const response = await fetch(`${API_BASE_URL}/me`, {
+      method: 'PUT',
+      headers: createHeaders(true),
+      body: JSON.stringify(data),
+    });
+
+    const result = await response.json();
+    if (!response.ok) {
+      throw new Error(result.message || 'Failed to update user profile');
+    }
+
+    return result;
+  },
+
+  // Change current user password
+  changePassword: async (data) => {
+    const response = await fetch(`${API_BASE_URL}/me/password`, {
+      method: 'PUT',
+      headers: createHeaders(true),
+      body: JSON.stringify(data),
+    });
+
+    const result = await response.json();
+    if (!response.ok) {
+      throw new Error(result.message || 'Failed to change password');
+    }
+
+    return result;
+  },
+
+  // Get organization (adoption center) profile
+  getOrganization: async () => {
+    const response = await fetch(`${API_BASE_URL}/profile`, {
+      method: 'GET',
+      headers: createHeaders(true),
+    });
+
+    const result = await response.json();
+    if (!response.ok) {
+      throw new Error(result.message || 'Failed to fetch organization profile');
+    }
+
+    return result;
+  },
+
+  // Update organization (adoption center) profile
+  updateOrganization: async (data) => {
+    const response = await fetch(`${API_BASE_URL}/profile`, {
+      method: 'PUT',
+      headers: createHeaders(true),
+      body: JSON.stringify(data),
+    });
+
+    const result = await response.json();
+    if (!response.ok) {
+      throw new Error(result.message || 'Failed to update organization profile');
+    }
+
+    return result;
+  },
+};
+
 export default {
   auth: authAPI,
   pet: petAPI,
   applications: applicationAPI,
   resources: resourcesAPI,
-  userManagement: userManagementAPI
+  userManagement: userManagementAPI,
+  profile: profileAPI
 };
 

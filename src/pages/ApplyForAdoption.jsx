@@ -1,11 +1,14 @@
-import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Loader2, Heart } from 'lucide-react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { ArrowLeft, Heart, Search, X, User, Mail, Phone, Send } from 'lucide-react';
+import { Spinner, PageSpinner } from '../components/ui/Spinner';
 import { toast } from 'sonner';
 import { useParams } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext';
 import { validateAdoptionForm } from '../lib/validation';
 import { cn, getImageUrl } from '../lib/utils';
 import FormField from '../components/ui/form-field';
+import { Switch } from '../components/ui/switch';
+import { Label } from '../components/ui/label';
 import api from '../services/api';
 
 // ---------------------------------------------------------------------------
@@ -75,7 +78,6 @@ const YesNoToggle = ({ value, onChange, error }) => (
   </div>
 );
 
-// Radio pill group
 const RadioPillGroup = ({ options, value, onChange, error }) => (
   <div className="flex flex-wrap gap-2">
     {options.map((opt) => (
@@ -104,6 +106,162 @@ const RadioPillGroup = ({ options, value, onChange, error }) => (
 );
 
 // ---------------------------------------------------------------------------
+// User Autocomplete Component
+// ---------------------------------------------------------------------------
+
+const UserAutocomplete = ({ selectedUser, onSelect, onClear, error }) => {
+  const [query, setQuery] = useState('');
+  const [suggestions, setSuggestions] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const debounceRef = useRef(null);
+  const wrapperRef = useRef(null);
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    const handler = (e) => {
+      if (wrapperRef.current && !wrapperRef.current.contains(e.target)) {
+        setShowDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  const handleSearch = useCallback((val) => {
+    setQuery(val);
+    setShowDropdown(true);
+    clearTimeout(debounceRef.current);
+
+    if (val.trim().length < 2) {
+      setSuggestions([]);
+      return;
+    }
+
+    debounceRef.current = setTimeout(async () => {
+      setLoading(true);
+      try {
+        const result = await api.userManagement.searchMobileUsers(val);
+        setSuggestions(result.data || []);
+      } catch {
+        setSuggestions([]);
+      } finally {
+        setLoading(false);
+      }
+    }, 300);
+  }, []);
+
+  const handleSelect = (user) => {
+    onSelect(user);
+    setQuery('');
+    setSuggestions([]);
+    setShowDropdown(false);
+  };
+
+  const handleClear = () => {
+    onClear();
+    setQuery('');
+    setSuggestions([]);
+  };
+
+  const getInitials = (u) => {
+    const fn = u.firstname || u.firstName || '';
+    const ln = u.lastname || u.lastName || '';
+    return `${fn[0] || ''}${ln[0] || ''}`.toUpperCase() || '?';
+  };
+
+  const getFullName = (u) => {
+    return `${u.firstname || u.firstName || ''} ${u.lastname || u.lastName || ''}`.trim();
+  };
+
+  if (selectedUser) {
+    return (
+      <div className={cn(
+        'rounded-lg border p-4 flex items-start gap-4',
+        error ? 'border-red-300 bg-red-50' : 'border-pink-200 bg-pink-50/60'
+      )}>
+        {/* Avatar */}
+        <div className="w-12 h-12 rounded-full bg-pink-100 flex items-center justify-center text-pink-700 font-bold text-sm flex-shrink-0">
+          {getInitials(selectedUser)}
+        </div>
+        {/* Info */}
+        <div className="flex-1 min-w-0">
+          <p className="font-semibold text-slate-900 text-sm">{getFullName(selectedUser)}</p>
+          <div className="flex flex-col gap-0.5 mt-1">
+            <div className="flex items-center gap-1.5 text-xs text-slate-500">
+              <Mail className="w-3 h-3" />
+              <span>{selectedUser.email}</span>
+            </div>
+            {selectedUser.phone && (
+              <div className="flex items-center gap-1.5 text-xs text-slate-500">
+                <Phone className="w-3 h-3" />
+                <span>{selectedUser.phone}</span>
+              </div>
+            )}
+          </div>
+        </div>
+        {/* Clear */}
+        <button
+          type="button"
+          onClick={handleClear}
+          className="p-1 rounded-full hover:bg-pink-100 text-slate-400 hover:text-slate-600 transition-colors cursor-pointer flex-shrink-0"
+        >
+          <X className="w-4 h-4" />
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div ref={wrapperRef} className="relative">
+      <div className={cn(
+        'flex items-center gap-2 px-3 py-2 bg-white border rounded-md transition-colors',
+        error ? 'border-red-400' : 'border-slate-200 focus-within:ring-1 focus-within:ring-pink-400 focus-within:border-pink-400'
+      )}>
+        <Search className="w-4 h-4 text-slate-300 flex-shrink-0" />
+        <input
+          type="text"
+          value={query}
+          onChange={(e) => handleSearch(e.target.value)}
+          onFocus={() => query.length >= 2 && setShowDropdown(true)}
+          placeholder="Search by name or email..."
+          className="flex-1 text-sm text-slate-800 placeholder-slate-300 outline-none bg-transparent"
+        />
+        {loading && <Spinner size="sm" className="text-slate-300 flex-shrink-0" />}
+      </div>
+
+      {showDropdown && (query.length >= 2) && (
+        <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-white border border-slate-200 rounded-lg shadow-lg overflow-hidden max-h-56 overflow-y-auto">
+          {suggestions.length === 0 && !loading ? (
+            <div className="px-4 py-3 text-sm text-slate-400 flex items-center gap-2">
+              <User className="w-4 h-4" />
+              {query.length >= 2 ? 'No users found' : 'Type at least 2 characters'}
+            </div>
+          ) : (
+            suggestions.map((u) => (
+              <button
+                key={u._id}
+                type="button"
+                onClick={() => handleSelect(u)}
+                className="w-full px-4 py-3 text-left hover:bg-pink-50 transition-colors flex items-center gap-3 border-b border-slate-50 last:border-0 cursor-pointer"
+              >
+                <div className="w-8 h-8 rounded-full bg-pink-100 flex items-center justify-center text-pink-700 font-semibold text-xs flex-shrink-0">
+                  {getInitials(u)}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-slate-900">{`${u.firstname || ''} ${u.lastname || ''}`.trim()}</p>
+                  <p className="text-xs text-slate-400 truncate">{u.email}{u.phone ? ` · ${u.phone}` : ''}</p>
+                </div>
+              </button>
+            ))
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ---------------------------------------------------------------------------
 // Page
 // ---------------------------------------------------------------------------
 
@@ -113,6 +271,11 @@ const ApplyForAdoption = () => {
 
   const [pet, setPet] = useState(null);
   const [loading, setLoading] = useState(true);
+
+  // User selector
+  const [selectedUser, setSelectedUser] = useState(null);
+  const [sendEmail, setSendEmail] = useState(true);
+
   const [formData, setFormData] = useState({
     livingType: '',
     hasChildren: null,
@@ -130,11 +293,17 @@ const ApplyForAdoption = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState({});
 
-  // Get pet details from context
+  // Load pet from context
   useEffect(() => {
     if (petId && pets.length > 0) {
       const foundPet = pets.find(p => p._id === petId);
       if (foundPet) {
+        // Guard: redirect if pet is not available
+        if (foundPet.adoptionStatus !== 'Available') {
+          toast.error(`${foundPet.name} is not available for adoption (status: ${foundPet.adoptionStatus})`);
+          navigate('pet-detail', petId);
+          return;
+        }
         setPet(foundPet);
         setLoading(false);
       } else {
@@ -142,14 +311,9 @@ const ApplyForAdoption = () => {
         navigate('inventory');
       }
     } else if (petId && pets.length === 0) {
-      // Still loading pets from context
       setLoading(true);
     }
   }, [petId, pets, navigate]);
-
-  // -------------------------------------------------------------------------
-  // Handlers
-  // -------------------------------------------------------------------------
 
   const clearFieldError = (fieldName) => {
     if (errors[fieldName]) {
@@ -172,14 +336,22 @@ const ApplyForAdoption = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // Build payload matching the backend model
+    // Validate user selection
+    if (!selectedUser) {
+      setErrors((prev) => ({ ...prev, selectedUser: 'Please select the applicant (mobile app user)' }));
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      toast.error('Please select the applicant before submitting');
+      return;
+    }
+
     const payload = {
       ...formData,
       petId: pet._id,
+      userId: selectedUser._id,
+      sendEmail,
       childrenAges: formData.hasChildren ? parseChildrenAges(childrenAgesInput) : [],
     };
 
-    // Validate
     const validation = validateAdoptionForm(payload);
     if (!validation.success) {
       setErrors(validation.errors);
@@ -193,7 +365,7 @@ const ApplyForAdoption = () => {
 
     try {
       await toast.promise(
-        api.applications.submitApplication(payload),
+        api.applications.centerSubmitApplication(payload),
         {
           loading: `Submitting adoption application for ${pet.name}...`,
           success: `Application submitted successfully for ${pet.name}!`,
@@ -201,7 +373,6 @@ const ApplyForAdoption = () => {
         }
       );
 
-      // Redirect to inventory or pet detail page after successful submission
       navigate('pet-detail', pet._id);
     } catch (error) {
       console.error('Failed to submit application:', error);
@@ -217,17 +388,12 @@ const ApplyForAdoption = () => {
   if (loading) {
     return (
       <div className="min-h-screen bg-slate-50/60 flex items-center justify-center">
-        <div className="text-center">
-          <Loader2 className="w-8 h-8 animate-spin text-pink-600 mx-auto mb-2" />
-          <p className="text-sm text-slate-500">Loading pet details...</p>
-        </div>
+        <PageSpinner label="Loading pet details..." />
       </div>
     );
   }
 
-  if (!pet) {
-    return null;
-  }
+  if (!pet) return null;
 
   // -------------------------------------------------------------------------
   // Render
@@ -258,8 +424,47 @@ const ApplyForAdoption = () => {
           {/* ── LEFT COLUMN ─────────────────────────────────────────────── */}
           <div className="lg:col-span-1 flex flex-col gap-5">
 
+            {/* Applicant Selector — REQUIRED */}
+            <SectionCard
+              title="Applicant *"
+              hint="Search and select the mobile app user applying for this pet"
+              className="overflow-visible"
+            >
+              <div className="flex flex-col gap-3">
+                <UserAutocomplete
+                  selectedUser={selectedUser}
+                  onSelect={(u) => {
+                    setSelectedUser(u);
+                    clearFieldError('selectedUser');
+                  }}
+                  onClear={() => setSelectedUser(null)}
+                  error={errors.selectedUser}
+                />
+                {errors.selectedUser && (
+                  <p className="text-xs text-red-500 flex items-center gap-1">{errors.selectedUser}</p>
+                )}
+
+                {/* Send Email Toggle */}
+                {selectedUser && (
+                  <div className="flex items-center justify-between gap-3 pt-2 border-t border-slate-100">
+                    <div>
+                      <Label htmlFor="send-email-switch" className="text-xs font-medium text-slate-700 cursor-pointer">
+                        Send email notification
+                      </Label>
+                      <p className="text-xs text-slate-400 mt-0.5">Notify applicant about their application</p>
+                    </div>
+                    <Switch
+                      id="send-email-switch"
+                      checked={sendEmail}
+                      onCheckedChange={setSendEmail}
+                    />
+                  </div>
+                )}
+              </div>
+            </SectionCard>
+
             {/* Pet Preview Card */}
-            <SectionCard title="Adopting" hint="The pet you're applying for">
+            <SectionCard title="Adopting" hint="The pet being applied for">
               <div className="flex flex-col items-center text-center">
                 {pet.photos?.[0] ? (
                   <img
@@ -288,7 +493,7 @@ const ApplyForAdoption = () => {
             </SectionCard>
 
             {/* About Your Home */}
-            <SectionCard title="About Your Home" hint="Tell us about your living situation">
+            <SectionCard title="About the Applicant's Home" hint="Living situation details">
               <div className="flex flex-col gap-4">
 
                 <FormField label="Living Situation" required error={errors.livingType}>
@@ -297,7 +502,7 @@ const ApplyForAdoption = () => {
                     onChange={(e) => handleChange('livingType', e.target.value)}
                     error={errors.livingType}
                   >
-                    <option value="" disabled>Select your home type...</option>
+                    <option value="" disabled>Select home type...</option>
                     <option>Apartment</option>
                     <option>House</option>
                     <option>Condo</option>
@@ -306,7 +511,7 @@ const ApplyForAdoption = () => {
                   </PetSelect>
                 </FormField>
 
-                <FormField label="Do you have children?" required error={errors.hasChildren}>
+                <FormField label="Do they have children?" required error={errors.hasChildren}>
                   <YesNoToggle
                     value={formData.hasChildren}
                     onChange={(v) => handleChange('hasChildren', v)}
@@ -315,10 +520,7 @@ const ApplyForAdoption = () => {
                 </FormField>
 
                 {formData.hasChildren === true && (
-                  <FormField
-                    label="Children's Ages"
-                    hint="Enter ages separated by commas (e.g. 3, 7, 12)"
-                  >
+                  <FormField label="Children's Ages" hint="Enter ages separated by commas (e.g. 3, 7, 12)">
                     <PetInput
                       value={childrenAgesInput}
                       onChange={(e) => setChildrenAgesInput(e.target.value)}
@@ -327,7 +529,7 @@ const ApplyForAdoption = () => {
                   </FormField>
                 )}
 
-                <FormField label="Do you have other pets?" required error={errors.hasOtherPets}>
+                <FormField label="Do they have other pets?" required error={errors.hasOtherPets}>
                   <YesNoToggle
                     value={formData.hasOtherPets}
                     onChange={(v) => handleChange('hasOtherPets', v)}
@@ -336,7 +538,7 @@ const ApplyForAdoption = () => {
                 </FormField>
 
                 {formData.hasOtherPets === true && (
-                  <FormField label="Describe your other pets" hint="Species, breed, temperament...">
+                  <FormField label="Describe their other pets" hint="Species, breed, temperament...">
                     <textarea
                       value={formData.otherPetsDetails}
                       onChange={(e) => handleChange('otherPetsDetails', e.target.value)}
@@ -358,8 +560,8 @@ const ApplyForAdoption = () => {
           {/* ── RIGHT COLUMN ────────────────────────────────────────────── */}
           <div className="lg:col-span-2 flex flex-col gap-5">
 
-            {/* Your Lifestyle */}
-            <SectionCard title="Your Lifestyle" hint="Help us match you with the right pet">
+            {/* Lifestyle */}
+            <SectionCard title="Applicant's Lifestyle" hint="Help match the right pet">
               <div className="flex flex-col gap-4">
 
                 <FormField label="Activity Level" required error={errors.activityLevel}>
@@ -386,7 +588,7 @@ const ApplyForAdoption = () => {
                     onChange={(e) => handleChange('workSchedule', e.target.value)}
                     error={errors.workSchedule}
                   >
-                    <option value="" disabled>Select your schedule...</option>
+                    <option value="" disabled>Select schedule...</option>
                     <option>Full-time</option>
                     <option>Part-time</option>
                     <option>Remote</option>
@@ -398,16 +600,16 @@ const ApplyForAdoption = () => {
               </div>
             </SectionCard>
 
-            {/* Your Message */}
-            <SectionCard title="Your Message" hint="Tell us why you want to adopt this pet">
+            {/* Message */}
+            <SectionCard title="Adoption Message" hint="Reason for adopting this pet">
               <div className="flex flex-col gap-4">
 
-                <FormField label="Why do you want to adopt?" required error={errors.reasonForAdoption}>
+                <FormField label="Why do they want to adopt?" required error={errors.reasonForAdoption}>
                   <textarea
                     value={formData.reasonForAdoption}
                     onChange={(e) => handleChange('reasonForAdoption', e.target.value)}
                     rows={6}
-                    placeholder={`Tell us about your motivation to adopt ${pet.name}, your lifestyle, and how you plan to care for them...`}
+                    placeholder={`Describe the motivation to adopt ${pet.name}, their lifestyle, and how they plan to care for the pet...`}
                     className={cn(
                       'w-full px-3 py-2.5 bg-white border rounded-md text-sm text-slate-800 placeholder-slate-300 resize-none',
                       'focus:outline-none focus:ring-1 transition-colors',
@@ -421,7 +623,7 @@ const ApplyForAdoption = () => {
                   )}
                 </FormField>
 
-                <FormField label="Additional Notes" hint="Any other information you'd like to share? (optional)">
+                <FormField label="Additional Notes" hint="Any other information? (optional)">
                   <textarea
                     value={formData.additionalNotes}
                     onChange={(e) => handleChange('additionalNotes', e.target.value)}
@@ -447,15 +649,11 @@ const ApplyForAdoption = () => {
             onClick={handleSubmit}
             disabled={isSubmitting}
             className="px-5 py-2 bg-pink-600 text-white text-sm font-medium rounded-md hover:bg-pink-700 active:bg-pink-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 cursor-pointer"
-            style={{ boxShadow: 'none' }}
           >
-            {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
-            {isSubmitting ? 'Submitting Application...' : (
-              <>
-                <Heart className="w-4 h-4" />
-                Submit Application
-              </>
-            )}
+            {isSubmitting
+              ? <><Spinner size="sm" /> Submitting...</>
+              : <><Send className="w-4 h-4" /> Submit Application</>
+            }
           </button>
           <button
             type="button"

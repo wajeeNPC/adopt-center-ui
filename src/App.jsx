@@ -6,6 +6,7 @@ import { Toaster } from 'sonner';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
 import { authAPI } from './services/api';
+import { Spinner } from './components/ui/Spinner';
 
 // Adoption Center Pages
 import Dashboard from './pages/Dashboard';
@@ -20,6 +21,8 @@ import Reports from './pages/Reports';
 import ApplyForAdoption from './pages/ApplyForAdoption';
 import UserManagement from './pages/UserManagement';
 import EditUser from './pages/EditUser';
+import InviteUser from './pages/InviteUser';
+import ApplicationDetail from './pages/ApplicationDetail';
 
 // Adoption Center Page Router Component
 const AdoptionCenterRouter = () => {
@@ -33,11 +36,14 @@ const AdoptionCenterRouter = () => {
       <Route path="/edit-pet/:petId" element={<EditPet />} />
       <Route path="/apply/:petId" element={<ApplyForAdoption />} />
       <Route path="/applications" element={<Applications />} />
+      <Route path="/applications/:applicationId" element={<ApplicationDetail />} />
       <Route path="/vaccinations" element={<Vaccinations />} />
       <Route path="/reports" element={<Reports />} />
       <Route path="/settings" element={<Settings />} />
       <Route path="/users" element={<UserManagement />} />
+      <Route path="/user-management" element={<Navigate to="/users" replace />} />
       <Route path="/edit-user/:userId" element={<EditUser />} />
+      <Route path="/invite-user" element={<InviteUser />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
@@ -80,7 +86,7 @@ function App() {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-pink-600"></div>
+        <Spinner size="xl" />
       </div>
     );
   }

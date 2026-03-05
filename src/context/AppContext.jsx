@@ -28,9 +28,13 @@ export const AppProvider = ({ children }) => {
     if (path.startsWith('/pet/')) return 'pet-detail';
     if (path.startsWith('/edit-pet/')) return 'edit-pet';
     if (path === '/applications') return 'applications';
+    if (path.startsWith('/applications/')) return 'application-detail';
     if (path === '/vaccinations') return 'vaccinations';
     if (path === '/reports') return 'reports';
     if (path === '/settings') return 'settings';
+    if (path === '/users' || path === '/user-management') return 'users';
+    if (path === '/invite-user') return 'invite-user';
+    if (path.startsWith('/apply/')) return 'apply';
     return 'dashboard';
   };
 
@@ -74,6 +78,15 @@ export const AppProvider = ({ children }) => {
         break;
       case 'applications':
         navigateRouter('/applications');
+        break;
+      case 'application-detail':
+        if (petId) navigateRouter(`/applications/${petId}`);
+        break;
+      case 'users':
+        navigateRouter('/users');
+        break;
+      case 'invite-user':
+        navigateRouter('/invite-user');
         break;
       case 'vaccinations':
         navigateRouter('/vaccinations');

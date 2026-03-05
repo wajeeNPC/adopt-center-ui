@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { MoreHorizontal, Eye, Edit, Trash2, Plus, Download, Upload } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
+import { toast } from 'sonner';
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '../components/ui/avatar';
@@ -29,6 +30,8 @@ const Inventory = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [speciesFilter, setSpeciesFilter] = useState('all');
+  const [genderFilter, setGenderFilter] = useState('all');
+  const [sizeFilter, setSizeFilter] = useState('all');
 
   // Filter Logic
   const filteredPets = pets.filter(pet => {
@@ -36,13 +39,18 @@ const Inventory = () => {
       pet.breed.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === 'all' || pet.adoptionStatus === statusFilter;
     const matchesSpecies = speciesFilter === 'all' || pet.species === speciesFilter;
+    const matchesGender = genderFilter === 'all' || pet.gender === genderFilter;
+    const matchesSize = sizeFilter === 'all' || pet.size === sizeFilter;
 
-    return matchesSearch && matchesStatus && matchesSpecies;
+    return matchesSearch && matchesStatus && matchesSpecies && matchesGender && matchesSize;
   });
 
-  const handleDelete = (id, name) => {
-    if (window.confirm(`Are you sure you want to delete ${name}?`)) {
-      deletePet(id);
+  const handleDelete = async (id, name) => {
+    if (!window.confirm(`Are you sure you want to delete ${name}?\n\nThis action cannot be undone.`)) return;
+    try {
+      await deletePet(id);
+    } catch (err) {
+      // Error toast is already shown by AppContext — nothing extra needed here
     }
   };
 
@@ -90,10 +98,16 @@ const Inventory = () => {
         onStatusChange={setStatusFilter}
         speciesFilter={speciesFilter}
         onSpeciesChange={setSpeciesFilter}
+        genderFilter={genderFilter}
+        onGenderChange={setGenderFilter}
+        sizeFilter={sizeFilter}
+        onSizeChange={setSizeFilter}
         onClearFilters={() => {
           setSearchTerm('');
           setStatusFilter('all');
           setSpeciesFilter('all');
+          setGenderFilter('all');
+          setSizeFilter('all');
         }}
       />
 

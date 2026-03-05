@@ -41,6 +41,21 @@ const Header = ({ setIsOpen, user, onLogout }) => {
       case 'settings':
         breadcrumbs.push({ label: 'Settings', path: null });
         return breadcrumbs;
+      case 'users':
+        breadcrumbs.push({ label: 'Users', path: null });
+        return breadcrumbs;
+      case 'invite-user':
+        breadcrumbs.push({ label: 'Users', path: 'users' });
+        breadcrumbs.push({ label: 'Invite User', path: null });
+        return breadcrumbs;
+      case 'apply':
+        breadcrumbs.push({ label: 'Pets', path: 'inventory' });
+        breadcrumbs.push({ label: 'Apply for Adoption', path: null });
+        return breadcrumbs;
+      case 'application-detail':
+        breadcrumbs.push({ label: 'Applications', path: 'applications' });
+        breadcrumbs.push({ label: 'Application Details', path: null });
+        return breadcrumbs;
       default:
         return breadcrumbs;
     }
@@ -50,6 +65,32 @@ const Header = ({ setIsOpen, user, onLogout }) => {
     if (path) {
       navigate(path);
     }
+  };
+
+  // Get user display name from stored user data
+  const getUserDisplayName = () => {
+    if (user?.firstName && user?.lastName) {
+      return `${user.firstName} ${user.lastName}`;
+    }
+    if (user?.name) {
+      return user.name;
+    }
+    return 'User';
+  };
+
+  // Get user initials for avatar
+  const getUserInitials = () => {
+    if (user?.firstName && user?.lastName) {
+      return `${user.firstName.charAt(0)}${user.lastName.charAt(0)}`.toUpperCase();
+    }
+    if (user?.name) {
+      const parts = user.name.split(' ');
+      if (parts.length >= 2) {
+        return `${parts[0].charAt(0)}${parts[1].charAt(0)}`.toUpperCase();
+      }
+      return user.name.charAt(0).toUpperCase();
+    }
+    return 'U';
   };
 
   return (
@@ -115,14 +156,14 @@ const Header = ({ setIsOpen, user, onLogout }) => {
               <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-pink-500 to-rose-400 p-[2px]">
                 <div className="w-full h-full rounded-full bg-white flex items-center justify-center">
                   <img
-                    src="https://api.dicebear.com/7.x/avataaars/svg?seed=Jane"
+                    src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.email || 'default'}`}
                     alt="User"
                     className="w-full h-full rounded-full"
                   />
                 </div>
               </div>
               <div className="hidden sm:block text-left mr-1">
-                <p className="text-sm font-semibold text-slate-900 leading-none">{user?.name || 'Jane Doe'}</p>
+                <p className="text-sm font-semibold text-slate-900 leading-none">{getUserDisplayName()}</p>
                 <p className="text-xs text-slate-500 mt-1 leading-none">{user?.role || 'Admin'}</p>
               </div>
               <ChevronDown className="w-4 h-4 text-slate-400 hidden sm:block" />
@@ -137,12 +178,18 @@ const Header = ({ setIsOpen, user, onLogout }) => {
                 ></div>
                 <div className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-xl border border-slate-100 py-1 z-50 animate-in fade-in zoom-in-95 duration-100">
                   <div className="px-4 py-3 border-b border-slate-100 bg-slate-50/50">
-                    <p className="text-sm font-medium text-slate-900">{user?.name || 'Jane Doe'}</p>
-                    <p className="text-xs text-slate-500 mt-0.5">{user?.email || 'jane@pawhome.com'}</p>
+                    <p className="text-sm font-medium text-slate-900">{getUserDisplayName()}</p>
+                    <p className="text-xs text-slate-500 mt-0.5">{user?.email || 'No email'}</p>
                   </div>
 
                   <div className="p-1">
-                    <button className="w-full flex items-center gap-2 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 rounded-lg transition-colors font-medium cursor-pointer">
+                    <button
+                      onClick={() => {
+                        setShowDropdown(false);
+                        navigate('settings');
+                      }}
+                      className="w-full flex items-center gap-2 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 rounded-lg transition-colors font-medium cursor-pointer"
+                    >
                       <User className="w-4 h-4 text-slate-400" />
                       <span>My Profile</span>
                     </button>

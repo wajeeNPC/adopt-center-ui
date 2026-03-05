@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, User, Mail, Phone, Shield, Loader2, Save } from 'lucide-react';
+import { ArrowLeft, User, Mail, Phone, Shield, Save } from 'lucide-react';
+import { Spinner, PageSpinner } from '../components/ui/Spinner';
 import { toast } from 'sonner';
 import api from '../services/api';
 import { cn } from '../lib/utils';
@@ -200,10 +201,7 @@ const EditUser = () => {
   if (loading) {
     return (
       <div className="min-h-screen bg-slate-50/60 flex items-center justify-center">
-        <div className="text-center">
-          <Loader2 className="w-12 h-12 text-pink-600 animate-spin mx-auto mb-4" />
-          <p className="text-slate-600">Loading user data...</p>
-        </div>
+        <PageSpinner label="Loading user data..." />
       </div>
     );
   }
@@ -403,7 +401,7 @@ const EditUser = () => {
             >
               {isSubmitting ? (
                 <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <Spinner size="sm" />
                   Saving...
                 </>
               ) : (

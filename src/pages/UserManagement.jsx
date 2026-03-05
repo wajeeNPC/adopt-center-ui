@@ -11,9 +11,7 @@ import {
   Edit,
   Trash2,
   RotateCcw,
-  X,
   MoreHorizontal,
-  Eye,
   UserCheck,
   UserX,
   Download
@@ -36,8 +34,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '../components/ui/dropdown-menu';
-import FilterBar from '../components/common/FilterBar';
 import PageActions from '../components/common/PageActions';
+import { PageSpinner } from '../components/ui/Spinner';
 import { toast } from 'sonner';
 
 export default function UserManagement() {
@@ -45,24 +43,10 @@ export default function UserManagement() {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [showInviteModal, setShowInviteModal] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
-  const [inviteData, setInviteData] = useState({
-    firstName: '',
-    lastName: '',
-    email: '',
-    phone: '',
-    role: 'admin',
-    nic: {
-      number: '',
-      issuedDate: '',
-    },
-  });
-  const [inviteError, setInviteError] = useState('');
-  const [inviting, setInviting] = useState(false);
 
   useEffect(() => {
     fetchUsers();
@@ -90,38 +74,6 @@ export default function UserManagement() {
       setError(err.message || 'Failed to load users');
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleInviteUser = async (e) => {
-    e.preventDefault();
-    setInviteError('');
-
-    try {
-      setInviting(true);
-      const result = await api.userManagement.inviteUser(inviteData);
-      if (result.success) {
-        toast.success(`User invited successfully! Temporary password: ${result.data.tempPassword}`);
-        setShowInviteModal(false);
-        setInviteData({
-          firstName: '',
-          lastName: '',
-          email: '',
-          phone: '',
-          role: 'admin',
-          nic: {
-            number: '',
-            issuedDate: '',
-          },
-        });
-        fetchUsers();
-      } else {
-        setInviteError(result.message || 'Failed to invite user');
-      }
-    } catch (err) {
-      setInviteError(err.message || 'Failed to invite user');
-    } finally {
-      setInviting(false);
     }
   };
 
@@ -237,7 +189,7 @@ export default function UserManagement() {
   });
 
   const actionItems = [
-    { label: 'Invite User', icon: UserPlus, onClick: () => setShowInviteModal(true) },
+    { label: 'Invite User', icon: UserPlus, onClick: () => navigate('/invite-user') },
     { separator: true },
     { label: 'Export CSV', icon: Download, onClick: handleExportCSV },
   ];
@@ -302,9 +254,7 @@ export default function UserManagement() {
 
       {/* Users List */}
       {loading ? (
-        <div className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-pink-600"></div>
-        </div>
+        <PageSpinner label="Loading users..." />
       ) : error ? (
         <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-red-800">
           {error}
@@ -458,172 +408,6 @@ export default function UserManagement() {
       <div className="text-sm text-slate-500">
         Showing {filteredUsers.length} of {users.length} users
       </div>
-
-      {/* Invite User Modal */}
-      {showInviteModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6 border-b border-slate-200 flex items-center justify-between sticky top-0 bg-white">
-              <h2 className="text-2xl font-bold text-slate-900">Invite User</h2>
-              <button
-                onClick={() => {
-                  setShowInviteModal(false);
-                  setInviteError('');
-                }}
-                className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
-              >
-                <X className="w-5 h-5 text-slate-500" />
-              </button>
-            </div>
-
-            <form onSubmit={handleInviteUser} className="p-6">
-              {inviteError && (
-                <div className="mb-4 bg-red-50 border border-red-200 rounded-xl p-4 text-red-800 text-sm">
-                  {inviteError}
-                </div>
-              )}
-
-              <div className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-2">
-                      First Name *
-                    </label>
-                    <input
-                      type="text"
-                      value={inviteData.firstName}
-                      onChange={(e) =>
-                        setInviteData({ ...inviteData, firstName: e.target.value })
-                      }
-                      required
-                      className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-2">
-                      Last Name *
-                    </label>
-                    <input
-                      type="text"
-                      value={inviteData.lastName}
-                      onChange={(e) =>
-                        setInviteData({ ...inviteData, lastName: e.target.value })
-                      }
-                      required
-                      className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">
-                    Email *
-                  </label>
-                  <input
-                    type="email"
-                    value={inviteData.email}
-                    onChange={(e) => setInviteData({ ...inviteData, email: e.target.value })}
-                    required
-                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">
-                    Phone
-                  </label>
-                  <input
-                    type="tel"
-                    value={inviteData.phone}
-                    onChange={(e) => setInviteData({ ...inviteData, phone: e.target.value })}
-                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent"
-                  />
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-2">
-                      NIC Number *
-                    </label>
-                    <input
-                      type="text"
-                      value={inviteData.nic.number}
-                      onChange={(e) =>
-                        setInviteData({
-                          ...inviteData,
-                          nic: { ...inviteData.nic, number: e.target.value },
-                        })
-                      }
-                      required
-                      className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-2">
-                      NIC Issued Date *
-                    </label>
-                    <input
-                      type="date"
-                      value={inviteData.nic.issuedDate}
-                      onChange={(e) =>
-                        setInviteData({
-                          ...inviteData,
-                          nic: { ...inviteData.nic, issuedDate: e.target.value },
-                        })
-                      }
-                      required
-                      className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">
-                    Role *
-                  </label>
-                  <select
-                    value={inviteData.role}
-                    onChange={(e) => setInviteData({ ...inviteData, role: e.target.value })}
-                    required
-                    disabled={currentUser?.role !== 'owner'}
-                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent disabled:bg-slate-100"
-                  >
-                    <option value="admin">Admin</option>
-                    {currentUser?.role === 'owner' && <option value="owner">Owner</option>}
-                  </select>
-                  <p className="mt-1 text-xs text-slate-500">
-                    {currentUser?.role === 'owner'
-                      ? 'Owners have full control. Admins can manage day-to-day operations.'
-                      : 'Only owners can invite other owners.'}
-                  </p>
-                </div>
-              </div>
-
-              <div className="mt-6 flex gap-3 justify-end">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowInviteModal(false);
-                    setInviteError('');
-                  }}
-                  className="px-4 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={inviting}
-                  className="px-4 py-2 bg-pink-600 text-white rounded-lg hover:bg-pink-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                >
-                  {inviting ? 'Inviting...' : 'Send Invite'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

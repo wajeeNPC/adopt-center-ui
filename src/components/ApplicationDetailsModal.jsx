@@ -23,7 +23,7 @@ const ApplicationDetailsModal = ({ application, onClose }) => {
                             <img src={pet.photos[0]} alt={pet.name} className="w-16 h-16 rounded-lg object-cover" />
                         )}
                         <div>
-                            <h3 className="font-semibold text-lg">{applicant?.name} wants to adopt {pet?.name}</h3>
+                            <h3 className="font-semibold text-lg">{`${applicant?.firstname || ''} ${applicant?.lastname || ''}`.trim() || 'Unknown'} wants to adopt {pet?.name}</h3>
                             <p className="text-sm text-gray-600">{applicant?.email}</p>
                             <p className="text-xs text-gray-500 mt-1">Applied on {new Date(application.createdAt).toLocaleDateString()}</p>
                         </div>

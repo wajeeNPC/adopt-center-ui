@@ -165,33 +165,6 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
             </nav>
           </div>
         </div>
-
-        {/* User profile footer */}
-        <div className={cn("p-3 border-t border-slate-100 flex-shrink-0", collapsed && "flex justify-center")}>
-          {collapsed ? (
-            <button
-              onClick={logout}
-              className="w-9 h-9 rounded-full bg-pink-100 flex items-center justify-center text-pink-600 cursor-pointer hover:ring-2 hover:ring-pink-300 transition-all"
-              title="Logout"
-            >
-              <LogOut className="w-4 h-4" />
-            </button>
-          ) : (
-            <button
-              onClick={logout}
-              className="w-full flex items-center gap-3 p-2 rounded-xl hover:bg-slate-50 transition-colors cursor-pointer group"
-            >
-              <div className="w-8 h-8 rounded-full bg-pink-100 flex items-center justify-center text-pink-600 font-bold text-xs flex-shrink-0">
-                JD
-              </div>
-              <div className="flex-1 min-w-0 text-left">
-                <p className="text-sm font-semibold text-slate-800 truncate leading-tight">Admin</p>
-                <p className="text-xs text-slate-400 truncate">Click to logout</p>
-              </div>
-              <LogOut className="w-4 h-4 text-slate-300 group-hover:text-pink-400 transition-colors flex-shrink-0" />
-            </button>
-          )}
-        </div>
       </aside>
     </>
   );

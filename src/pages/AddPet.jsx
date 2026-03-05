@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Dog, Cat, ArrowLeft, Upload, X, Loader2 } from 'lucide-react';
+import { Dog, Cat, ArrowLeft, Upload, X } from 'lucide-react';
+import { Spinner } from '../components/ui/Spinner';
 import { toast } from 'sonner';
 import { useAppContext } from '../context/AppContext';
 import BreedAutocomplete from '../components/common/BreedAutocomplete';
@@ -471,7 +472,7 @@ const AddPet = () => {
             className="px-5 py-2 bg-pink-600 text-white text-sm font-medium rounded-md hover:bg-pink-700 active:bg-pink-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 cursor-pointer"
             style={{ boxShadow: 'none' }}
           >
-            {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
+            {isSubmitting && <Spinner size="sm" />}
             {isSubmitting ? 'Adding Pet...' : '+ Add Pet'}
           </button>
           <button
